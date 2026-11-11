@@ -218,15 +218,15 @@ export const PunchClock: React.FC<PunchClockProps> = ({
       {/* Main Digital Clock Card (Black background, responsive date, no watermark) */}
       <div className="bg-black text-white rounded-3xl p-5 sm:p-7 shadow-xl border border-neutral-800 relative overflow-hidden">
         <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
-          <div className="flex items-center gap-1.5 text-slate-300 min-w-0">
-            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-400 shrink-0" />
+          <div className="flex items-center gap-1.5 text-taupe-300 min-w-0">
+            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-taupe-400 shrink-0" />
             <span className="text-xs sm:text-sm font-semibold tracking-wide text-white truncate">
               {dateString}
             </span>
           </div>
 
           <div className="flex items-center shrink-0">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/10 text-slate-200 border border-white/10 whitespace-nowrap">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/10 text-taupe-200 border border-white/10 whitespace-nowrap">
               <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse" />
               雲端打卡機連線中
             </span>
@@ -238,29 +238,29 @@ export const PunchClock: React.FC<PunchClockProps> = ({
           <div className="text-5xl xs:text-6xl sm:text-7xl font-mono font-bold tracking-tight text-white tabular-nums drop-shadow-md">
             {timeString}
           </div>
-          <p className="text-[11px] sm:text-xs text-slate-400 mt-2">
+          <p className="text-[11px] sm:text-xs text-taupe-400 mt-2">
             領日薪制 · 實際打卡時間作為每日工數與工資依據
           </p>
         </div>
 
         {/* Current Employee Profile Pill without thumbnail */}
-        <div className="mt-4 pt-4 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-4 pt-4 border-t border-taupe-700/60 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-white text-base sm:text-lg">
                 {currentEmployee.name}
               </span>
               {isAdmin ? (
-                <span className="text-[11px] font-bold text-amber-300 bg-amber-950/80 border border-amber-600/50 px-2 py-0.5 rounded-md">
+                <span className="text-[11px] font-bold text-taupe-300 bg-taupe-950/80 border border-taupe-600/50 px-2 py-0.5 rounded-md">
                   管理人
                 </span>
               ) : (
-                <span className="text-xs font-medium text-slate-300 bg-slate-700/60 px-2 py-0.5 rounded-md">
+                <span className="text-xs font-medium text-taupe-300 bg-taupe-700/60 px-2 py-0.5 rounded-md">
                   {currentEmployee.workType}
                 </span>
               )}
             </div>
-            <p className="text-xs text-orange-300/90 font-mono mt-0.5">
+            <p className="text-xs text-taupe-300/90 font-mono mt-0.5">
               日薪標準：NT$ {currentEmployee.dailyRate.toLocaleString()} / 天
             </p>
           </div>
@@ -275,10 +275,10 @@ export const PunchClock: React.FC<PunchClockProps> = ({
       </div>
 
       {/* Today Punch Status Banner */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-        <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center justify-between">
+      <div className="bg-white rounded-2xl p-5 border border-taupe-200 shadow-xs">
+        <h3 className="text-sm font-bold text-taupe-900 mb-3 flex items-center justify-between">
           <span className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-orange-600" />
+            <Clock className="w-4 h-4 text-taupe-600" />
             出勤狀態
           </span>
           {isPunchedOut ? (
@@ -286,12 +286,12 @@ export const PunchClock: React.FC<PunchClockProps> = ({
               ✓ 今日已完成下班打卡
             </span>
           ) : isPunchedIn ? (
-            <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+            <span className="text-xs font-semibold text-taupe-700 bg-taupe-50 px-2.5 py-1 rounded-full border border-taupe-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-taupe-500 animate-ping" />
               施工中 · 累計 {elapsedHoursText}
             </span>
           ) : (
-            <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-medium text-taupe-500 bg-taupe-100 px-2.5 py-1 rounded-full">
               尚未打上班卡
             </span>
           )}
@@ -299,23 +299,23 @@ export const PunchClock: React.FC<PunchClockProps> = ({
 
         {/* Detailed Times Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="text-xs text-slate-500">上班打卡</div>
-            <div className="text-lg font-mono font-bold text-slate-900 mt-1">
+          <div className="p-3 rounded-xl bg-taupe-50 border border-taupe-100">
+            <div className="text-xs text-taupe-500">上班打卡</div>
+            <div className="text-lg font-mono font-bold text-taupe-900 mt-1">
               {todayRecord?.clockInTime || '--:--:--'}
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="text-xs text-slate-500">下班打卡</div>
-            <div className="text-lg font-mono font-bold text-slate-900 mt-1">
+          <div className="p-3 rounded-xl bg-taupe-50 border border-taupe-100">
+            <div className="text-xs text-taupe-500">下班打卡</div>
+            <div className="text-lg font-mono font-bold text-taupe-900 mt-1">
               {todayRecord?.clockOutTime || '--:--:--'}
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="text-xs text-slate-500">本日工時</div>
-            <div className="text-lg font-mono font-bold text-orange-600 mt-1">
+          <div className="p-3 rounded-xl bg-taupe-50 border border-taupe-100">
+            <div className="text-xs text-taupe-500">本日工時</div>
+            <div className="text-lg font-mono font-bold text-taupe-600 mt-1">
               {todayRecord?.durationHours !== undefined
                 ? `${todayRecord.durationHours} 小時`
                 : isPunchedIn
@@ -324,8 +324,8 @@ export const PunchClock: React.FC<PunchClockProps> = ({
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="text-xs text-slate-500">預估當日工數薪資</div>
+          <div className="p-3 rounded-xl bg-taupe-50 border border-taupe-100">
+            <div className="text-xs text-taupe-500">預估當日工數薪資</div>
             <div className="text-lg font-mono font-bold text-emerald-700 mt-1">
               {todayRecord?.calculatedWage
                 ? `NT$ ${todayRecord.calculatedWage.toLocaleString()}`
@@ -337,15 +337,15 @@ export const PunchClock: React.FC<PunchClockProps> = ({
         </div>
 
         {todayRecord?.modifiedByAdmin && (
-          <div className="mt-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center justify-between">
+          <div className="mt-3 p-2.5 rounded-lg bg-taupe-50 border border-taupe-200 text-xs text-taupe-800 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-amber-600" />
+              <Shield className="w-3.5 h-3.5 text-taupe-600" />
               此筆紀錄由管理員審核修訂
             </span>
             {isAdmin && onEditRecord && (
               <button
                 onClick={() => onEditRecord(todayRecord)}
-                className="text-amber-900 font-semibold underline text-xs"
+                className="text-taupe-900 font-semibold underline text-xs"
               >
                 再編輯
               </button>
@@ -355,10 +355,10 @@ export const PunchClock: React.FC<PunchClockProps> = ({
       </div>
 
       {/* Punch Action Control Box */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-5">
+      <div className="bg-white rounded-3xl p-6 border border-taupe-200 shadow-sm space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-slate-900 text-base">施工案場</h3>
-          <span className="text-[11px] text-slate-400">
+          <h3 className="font-bold text-taupe-900 text-base">施工案場</h3>
+          <span className="text-[11px] text-taupe-400">
             點選案場打卡 · 支援自訂與編輯
           </span>
         </div>
@@ -375,7 +375,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                 return (
                   <div
                     key={`edit-${idx}`}
-                    className="p-2 rounded-xl border-2 border-orange-400 bg-orange-50/50 flex items-center gap-2"
+                    className="p-2 rounded-xl border-2 border-taupe-400 bg-taupe-50/50 flex items-center gap-2"
                   >
                     <input
                       type="text"
@@ -398,7 +398,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                         }
                       }}
                       autoFocus
-                      className="flex-1 px-2.5 py-1 text-xs bg-white border border-orange-300 rounded-lg focus:outline-none"
+                      className="flex-1 px-2.5 py-1 text-xs bg-white border border-taupe-300 rounded-lg focus:outline-none"
                     />
                     <button
                       type="button"
@@ -415,7 +415,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                         setEditingIndex(null);
                       }}
                       title="儲存名稱"
-                      className="p-1 rounded-md bg-orange-600 text-white hover:bg-orange-700 cursor-pointer"
+                      className="p-1 rounded-md bg-taupe-600 text-white hover:bg-taupe-700 cursor-pointer"
                     >
                       <Check className="w-3.5 h-3.5" />
                     </button>
@@ -426,7 +426,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                         setEditingIndex(null);
                       }}
                       title="取消"
-                      className="p-1 rounded-md bg-slate-200 text-slate-600 hover:bg-slate-300 cursor-pointer"
+                      className="p-1 rounded-md bg-taupe-200 text-taupe-600 hover:bg-taupe-300 cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -445,8 +445,8 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                   }}
                   className={`group relative px-3 py-2.5 rounded-xl text-xs font-medium border transition-all flex items-center justify-between cursor-pointer ${
                     isSelected
-                      ? 'border-orange-500 bg-orange-50/90 text-orange-950 font-bold shadow-xs'
-                      : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700 hover:bg-slate-50/50'
+                      ? 'border-taupe-500 bg-taupe-50/90 text-taupe-950 font-bold shadow-xs'
+                      : 'border-taupe-200 hover:border-taupe-300 bg-white text-taupe-700 hover:bg-taupe-50/50'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 truncate min-w-0 pr-2">
@@ -469,7 +469,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                         setEditingValue(site);
                       }}
                       title="修改案場名稱"
-                      className="p-1 rounded-md text-slate-400 hover:text-orange-600 hover:bg-orange-100/60 transition-colors cursor-pointer"
+                      className="p-1 rounded-md text-taupe-400 hover:text-taupe-600 hover:bg-taupe-100/60 transition-colors cursor-pointer"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
@@ -488,7 +488,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                         }
                       }}
                       title="刪除案場"
-                      className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-100/60 transition-colors cursor-pointer"
+                      className="p-1 rounded-md text-taupe-400 hover:text-rose-600 hover:bg-rose-100/60 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -503,7 +503,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
             <button
               type="button"
               onClick={() => setIsAddingSite(true)}
-              className="inline-flex items-center gap-1.5 text-xs text-orange-600 hover:text-orange-700 font-bold transition-colors cursor-pointer pt-1"
+              className="inline-flex items-center gap-1.5 text-xs text-taupe-600 hover:text-taupe-700 font-bold transition-colors cursor-pointer pt-1"
             >
               <Plus className="w-3.5 h-3.5" />
               新增施工案場
@@ -534,7 +534,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                   }
                 }}
                 autoFocus
-                className="flex-1 px-3 py-1.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="flex-1 px-3 py-1.5 text-xs border border-taupe-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500"
               />
               <button
                 type="button"
@@ -550,7 +550,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                     setIsAddingSite(false);
                   }
                 }}
-                className="px-3 py-1.5 text-xs font-bold bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-xs font-bold bg-taupe-600 text-white rounded-xl hover:bg-taupe-700 transition-colors cursor-pointer"
               >
                 新增
               </button>
@@ -560,7 +560,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                   setIsAddingSite(false);
                   setNewSiteValue('');
                 }}
-                className="px-2.5 py-1.5 text-xs font-semibold text-slate-500 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer"
+                className="px-2.5 py-1.5 text-xs font-semibold text-taupe-500 border border-taupe-200 rounded-xl hover:bg-taupe-50 cursor-pointer"
               >
                 取消
               </button>
@@ -569,17 +569,17 @@ export const PunchClock: React.FC<PunchClockProps> = ({
         </div>
 
         {/* Location & GPS Info */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-600">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-taupe-50 rounded-xl border border-taupe-100 text-xs text-taupe-600">
           <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-orange-600 shrink-0" />
-            <span className="font-medium text-slate-700">案場定位：</span>
+            <MapPin className="w-4 h-4 text-taupe-600 shrink-0" />
+            <span className="font-medium text-taupe-700">案場定位：</span>
             <span>{locationText}</span>
           </div>
           <button
             type="button"
             onClick={handleGetLocation}
             disabled={isLocating}
-            className="text-orange-600 hover:text-orange-700 font-semibold underline text-left sm:text-right"
+            className="text-taupe-600 hover:text-taupe-700 font-semibold underline text-left sm:text-right"
           >
             {isLocating ? '抓取定位中...' : '重新抓取 GPS'}
           </button>
@@ -587,18 +587,18 @@ export const PunchClock: React.FC<PunchClockProps> = ({
 
         {/* Daily Remarks / Work note */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
+          <label className="block text-xs font-semibold text-taupe-700 mb-1">
             工作備註 (選填，如：今日進材料 / 加班 / 灌漿)
           </label>
           <div className="relative">
-            <FileText className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <FileText className="w-4 h-4 text-taupe-400 absolute left-3 top-3" />
             <input
               type="text"
               value={punchNotes}
               onChange={(e) => setPunchNotes(e.target.value)}
               placeholder="例如：提早進料、防水塗佈第一道完成"
               disabled={isPunchedOut}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-taupe-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500"
             />
           </div>
         </div>
@@ -610,7 +610,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
             <button
               onClick={handleClockInAction}
               disabled={isSubmitting}
-              className="w-full py-4 sm:py-5 rounded-2xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-bold text-xl sm:text-2xl shadow-lg shadow-orange-600/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+              className="w-full py-4 sm:py-5 rounded-2xl bg-taupe-600 hover:bg-taupe-700 active:scale-[0.98] text-white font-bold text-xl sm:text-2xl shadow-lg shadow-taupe-600/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
             >
               <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
                 <Clock className="w-5 h-5 text-white" />
@@ -622,7 +622,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
             <button
               onClick={handleClockOutAction}
               disabled={isSubmitting}
-              className="w-full py-4 sm:py-5 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white font-bold text-xl sm:text-2xl shadow-lg shadow-slate-900/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+              className="w-full py-4 sm:py-5 rounded-2xl bg-taupe-900 hover:bg-taupe-800 active:scale-[0.98] text-white font-bold text-xl sm:text-2xl shadow-lg shadow-taupe-900/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
             >
               <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
@@ -654,8 +654,8 @@ export const PunchClock: React.FC<PunchClockProps> = ({
         </div>
 
         {/* Construction Notice footer */}
-        <div className="text-xs text-slate-500 flex items-start gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
-          <AlertCircle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+        <div className="text-xs text-taupe-500 flex items-start gap-2 bg-taupe-50 p-3 rounded-xl border border-taupe-100">
+          <AlertCircle className="w-4 h-4 text-taupe-500 shrink-0 mt-0.5" />
           <span>
             <strong>出勤規範說明：</strong> 本工程行師傅及員工採日薪制核算。員工本人僅可打上班與下班卡，無法自行修改歷史打卡紀錄；如有遺漏或時間需修正，請於次日前向管理員回報進行系統補登。
           </span>
