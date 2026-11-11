@@ -6,7 +6,7 @@ import { CloudSheetView } from './components/CloudSheetView';
 import { AdminPanel } from './components/AdminPanel';
 import { EditRecordModal, calculateWorkStats } from './components/EditRecordModal';
 import { Employee, PunchRecord, CompanyState } from './types';
-import { Clock, Calendar, FileSpreadsheet, Shield, KeyRound, MessageSquareWarning, X, Check, Lock, RefreshCw, Send, Delete, Eye, EyeOff, LogOut, UserCheck } from 'lucide-react';
+import { Clock, Calendar, FileSpreadsheet, Shield, KeyRound, MessageSquareWarning, X, Check, Lock, RefreshCw, Send, Delete, Eye, EyeOff, LogOut, Radio, Sparkles } from 'lucide-react';
 import { playPunchSound } from './utils/sound';
 
 import splashImg from './assets/images/splash.jpg';
@@ -66,13 +66,13 @@ export default function App() {
   const [records, setRecords] = useState<PunchRecord[]>([]);
   const [adminPin, setAdminPin] = useState('8888');
 
-  // 登入驗證狀態：預設未驗證登入（重整絕對不自動進管理員）
+  // 登入驗證狀態
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  // 登入頁專屬選人與 PIN 碼狀態
+  // 門禁登入頁選人與 PIN 碼
   const [loginSelectedUser, setLoginSelectedUser] = useState<Employee | null>(null);
   const [loginInputPin, setLoginInputPin] = useState('');
   const [loginPinError, setLoginPinError] = useState('');
@@ -158,7 +158,6 @@ export default function App() {
 
           setEmployees(loadedEmployees);
 
-          // 若已在登入狀態中，動態更新當前身分資料
           if (currentEmployee) {
             const updated = loadedEmployees.find((e) => e.id === currentEmployee.id);
             if (updated) setCurrentEmployee(updated);
@@ -218,7 +217,7 @@ export default function App() {
     (r) => r.employeeId === currentEmployee?.id && r.date === todayStr
   );
 
-  // 首頁門禁：輸入 PIN 碼登入
+  // 首頁門禁：登入驗證
   const handleLoginSubmit = () => {
     if (!loginSelectedUser) return;
 
@@ -244,7 +243,7 @@ export default function App() {
     }
   };
 
-  // 登出並強制返回驗證鎖定首頁
+  // 登出鎖定
   const handleLogout = () => {
     setIsAuthenticated(false);
     setCurrentEmployee(null);
@@ -373,7 +372,7 @@ export default function App() {
     await sendToGoogleSheet({ action: 'deleteEmployee', id });
   };
 
-  // 系統內切換人員（切換至一般員工時降權保護並強制退回打卡鐘）
+  // 系統內切換人員（嚴格權限隔離）
   const handleConfirmSwitchWithPin = () => {
     if (!switchTargetUser) return;
 
@@ -412,7 +411,7 @@ export default function App() {
     }
   };
 
-  // 管理後台臨時輸入密碼解鎖
+  // 管理後台未授權解鎖
   const handleUnlockAdmin = () => {
     if (sanitizePin(adminUnlockPin) === sanitizePin(adminPin, '8888')) {
       setIsAdmin(true);
@@ -425,7 +424,7 @@ export default function App() {
     }
   };
 
-  // 密碼顯示/隱藏切換
+  // 密碼遮蔽切換
   const toggleRevealPin = (empId: string) => {
     setRevealedPins((prev) => ({
       ...prev,
@@ -490,7 +489,7 @@ export default function App() {
     }
   };
 
-  // 個人自行修改密碼
+  // 個人修改密碼
   const handleChangePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentEmployee) return;
@@ -572,7 +571,7 @@ export default function App() {
     }
   };
 
-  // 螢幕虛擬數字鍵盤
+  // 精密儀器感觸控數字鍵盤（Divetek 輕阻尼質感）
   const VirtualKeypad = ({
     onDigit,
     onDelete,
@@ -588,7 +587,7 @@ export default function App() {
           key={num}
           type="button"
           onClick={() => { playPunchSound('tap'); onDigit(String(num)); }}
-          className="h-12 rounded-2xl bg-slate-100 hover:bg-orange-50 active:bg-orange-200 active:scale-95 text-lg font-bold text-slate-800 transition-all flex items-center justify-center shadow-xs"
+          className="h-12 rounded-2xl bg-white border border-slate-200/90 hover:border-orange-500/60 hover:bg-orange-50/40 active:bg-orange-100 active:scale-95 text-lg font-bold text-slate-800 transition-all duration-150 flex items-center justify-center shadow-xs"
         >
           {num}
         </button>
@@ -596,28 +595,28 @@ export default function App() {
       <button
         type="button"
         onClick={() => { playPunchSound('tap'); onClear(); }}
-        className="h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-xs font-semibold text-slate-600 transition-all flex items-center justify-center shadow-xs"
+        className="h-12 rounded-2xl bg-slate-100/80 border border-slate-200/60 hover:bg-slate-200/70 active:scale-95 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-all duration-150 flex items-center justify-center shadow-xs"
       >
         清除
       </button>
       <button
         type="button"
         onClick={() => { playPunchSound('tap'); onDigit('0'); }}
-        className="h-12 rounded-2xl bg-slate-100 hover:bg-orange-50 active:bg-orange-200 active:scale-95 text-lg font-bold text-slate-800 transition-all flex items-center justify-center shadow-xs"
+        className="h-12 rounded-2xl bg-white border border-slate-200/90 hover:border-orange-500/60 hover:bg-orange-50/40 active:bg-orange-100 active:scale-95 text-lg font-bold text-slate-800 transition-all duration-150 flex items-center justify-center shadow-xs"
       >
         0
       </button>
       <button
         type="button"
         onClick={() => { playPunchSound('tap'); onDelete(); }}
-        className="h-12 rounded-2xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 active:scale-95 transition-all flex items-center justify-center shadow-xs"
+        className="h-12 rounded-2xl bg-slate-100/80 border border-slate-200/60 hover:bg-rose-50 hover:border-rose-200 text-slate-500 hover:text-rose-600 active:scale-95 transition-all duration-150 flex items-center justify-center shadow-xs"
       >
         <Delete className="w-5 h-5" />
       </button>
     </div>
   );
 
-  // 1. 初次載入畫面（名片開場動畫）
+  // 1. 開場黑底名片動畫（保留）
   if (!isDataLoaded) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white select-none">
@@ -647,45 +646,68 @@ export default function App() {
     );
   }
 
-  // 2. 核心防護：未通過 PIN 碼驗證時，強制顯示進站鎖定頁（絕對不自動登入管理員）
+  // 2. 門禁鎖定登入頁（升級 Divetek 精密極簡工業風）
   if (!isAuthenticated || !currentEmployee) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 antialiased">
-        <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-200">
-          {/* 鎖定頁頂部 Header */}
-          <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+      <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 flex items-center justify-center p-4 antialiased text-slate-900">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.08)] border border-slate-200/80 transition-all duration-300">
+          
+          {/* 精密設備感深色頂欄 */}
+          <div className="px-6 py-5 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl overflow-hidden bg-black border border-slate-700 flex items-center justify-center p-0.5">
+              <div className="w-10 h-10 rounded-xl overflow-hidden bg-black border border-slate-700/80 flex items-center justify-center p-0.5 shadow-sm">
                 <img src={boboLogo} alt="Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <h3 className="font-bold text-base leading-tight">薄薄工程行打卡系統</h3>
-                <p className="text-[11px] text-slate-400">請選取您的身分並輸入 PIN 碼進入</p>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-base tracking-tight leading-none text-slate-100">薄薄工程行</h3>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                    打卡系統
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1 font-mono tracking-wide">
+                  考勤端點 · 請選取身分驗證
+                </p>
               </div>
             </div>
-            <Lock className="w-4 h-4 text-orange-400 shrink-0" />
+
+            {/* 即時脈衝訊號燈 */}
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-900 border border-slate-800 text-[10px] text-emerald-400 font-mono">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="hidden sm:inline">在線</span>
+            </div>
           </div>
 
-          <div className="p-5 space-y-4">
+          <div className="p-6 space-y-4">
             {!loginSelectedUser ? (
-              <div className="space-y-2.5 max-h-[65vh] overflow-y-auto pr-0.5">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">請點選出勤姓名</div>
+              <div className="space-y-2.5 max-h-[62vh] overflow-y-auto pr-0.5">
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1 flex items-center justify-between">
+                  <span>人員身分清單</span>
+                  <span className="text-[10px] text-slate-400 font-mono">共 {employees.length} 位</span>
+                </div>
                 
                 {/* 吳昱勳 (管理人) */}
                 {employees.filter((e) => e.role === 'admin' || e.name === '吳昱勳').map((emp) => (
                   <button
                     key={emp.id}
                     onClick={() => { setLoginSelectedUser(emp); setLoginInputPin(''); setLoginPinError(''); }}
-                    className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-left transition-all shadow-2xs"
+                    className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-amber-300/80 bg-gradient-to-r from-amber-50/70 to-orange-50/40 hover:from-amber-100/80 hover:to-orange-100/60 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 text-left shadow-xs group"
                   >
                     <div>
                       <div className="font-bold text-amber-950 text-sm flex items-center gap-1.5">
                         <span>{emp.name}</span>
-                        <span className="text-[10px] px-1.5 py-0.2 bg-amber-200 text-amber-900 rounded font-semibold">管理人</span>
+                        <span className="text-[10px] px-2 py-0.5 bg-amber-200/80 text-amber-900 rounded font-semibold border border-amber-300">
+                          管理人
+                        </span>
                       </div>
                       <div className="text-[11px] text-amber-800/80 mt-0.5 font-medium">薄老闆 · 最高權限管理</div>
                     </div>
-                    <Lock className="w-4 h-4 text-amber-700" />
+                    <div className="w-8 h-8 rounded-xl bg-amber-200/60 group-hover:bg-amber-300/70 flex items-center justify-center transition-colors">
+                      <Lock className="w-4 h-4 text-amber-800" />
+                    </div>
                   </button>
                 ))}
 
@@ -694,22 +716,28 @@ export default function App() {
                   <button
                     key={emp.id}
                     onClick={() => { setLoginSelectedUser(emp); setLoginInputPin(''); setLoginPinError(''); }}
-                    className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-left transition-all"
+                    className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-slate-200/90 bg-white hover:bg-slate-50/90 hover:border-slate-300 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 text-left shadow-xs group"
                   >
                     <div>
-                      <div className="font-bold text-slate-800 text-sm">{emp.name}</div>
-                      <div className="text-xs text-slate-500">{emp.workType} · NT${emp.dailyRate}/天</div>
+                      <div className="font-bold text-slate-800 text-sm group-hover:text-slate-900 transition-colors">
+                        {emp.name}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5 font-medium">
+                        {emp.workType} · <span className="font-mono text-slate-700">NT${emp.dailyRate}</span>/天
+                      </div>
                     </div>
-                    <Lock className="w-4 h-4 text-slate-400" />
+                    <div className="w-8 h-8 rounded-xl bg-slate-100 group-hover:bg-slate-200/70 flex items-center justify-center transition-colors">
+                      <Lock className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
+                    </div>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="text-center py-1">
-                  <div className="text-xs text-slate-500">出勤身分確認</div>
-                  <div className="text-xl font-bold text-slate-900 mt-0.5">{loginSelectedUser.name}</div>
-                  <div className="text-xs text-orange-600 mt-1 font-medium">
+                  <div className="text-xs text-slate-400 tracking-wider font-semibold uppercase">身分驗證</div>
+                  <div className="text-2xl font-black text-slate-900 mt-0.5 tracking-tight">{loginSelectedUser.name}</div>
+                  <div className="text-xs text-orange-600 mt-1 font-medium bg-orange-50 inline-block px-3 py-1 rounded-full border border-orange-200/60">
                     {loginSelectedUser.role === 'admin' || loginSelectedUser.name === '吳昱勳'
                       ? '請輸入管理員 PIN 碼 (預設: 8888)'
                       : '請輸入員工打卡 PIN 碼 (預設: 0000)'}
@@ -717,13 +745,13 @@ export default function App() {
                 </div>
 
                 {/* 4 位數 PIN 碼圓點顯示 */}
-                <div className="flex justify-center items-center gap-3 py-2">
+                <div className="flex justify-center items-center gap-3.5 py-2">
                   {[0, 1, 2, 3].map((idx) => (
                     <div
                       key={idx}
-                      className={`w-4 h-4 rounded-full border-2 transition-all ${
+                      className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${
                         loginInputPin.length > idx
-                          ? 'bg-orange-600 border-orange-600 scale-110 shadow-xs'
+                          ? 'bg-orange-600 border-orange-500 scale-110 shadow-[0_0_10px_rgba(249,115,22,0.4)]'
                           : 'bg-slate-100 border-slate-300'
                       }`}
                     />
@@ -731,7 +759,9 @@ export default function App() {
                 </div>
 
                 {loginPinError && (
-                  <div className="text-xs text-rose-600 text-center font-semibold">{loginPinError}</div>
+                  <div className="text-xs text-rose-600 text-center font-semibold bg-rose-50 py-1.5 px-3 rounded-xl border border-rose-200/80">
+                    {loginPinError}
+                  </div>
                 )}
 
                 {/* 螢幕數字鍵盤 */}
@@ -752,20 +782,20 @@ export default function App() {
                   }}
                 />
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2.5 pt-2">
                   <button
                     type="button"
                     onClick={() => { setLoginSelectedUser(null); setLoginInputPin(''); }}
-                    className="flex-1 py-2.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50"
+                    className="flex-1 py-2.5 text-xs font-semibold text-slate-600 border border-slate-200/80 rounded-xl hover:bg-slate-100/80 active:scale-95 transition-all"
                   >
                     返回選人
                   </button>
                   <button
                     type="button"
                     onClick={handleLoginSubmit}
-                    className="flex-1 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl flex items-center justify-center gap-1 shadow-xs"
+                    className="flex-1 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg active:scale-95 transition-all"
                   >
-                    <Check className="w-4 h-4" />
+                    <Check className="w-4 h-4 text-orange-400" />
                     <span>確認進入</span>
                   </button>
                 </div>
@@ -777,9 +807,9 @@ export default function App() {
     );
   }
 
-  // 3. 通過 PIN 碼驗證後進入系統主畫面
+  // 3. 系統主畫面（Divetek 工業精密風格注入）
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col antialiased text-slate-900 pb-20 sm:pb-8">
+    <div className="min-h-screen bg-slate-50/90 flex flex-col antialiased text-slate-900 pb-20 sm:pb-8 selection:bg-orange-500 selection:text-white">
       {/* 頂端標題導覽列 */}
       <Header
         currentEmployee={currentEmployee}
@@ -799,8 +829,8 @@ export default function App() {
         }}
       />
 
-      {/* 快捷操作條 */}
-      <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-3 flex items-center justify-between text-xs">
+      {/* 快捷操作條（精密膠囊按鈕樣式） */}
+      <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-4 flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -812,7 +842,7 @@ export default function App() {
               setChangePinSuccess(false);
               setIsChangePinOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-100 transition-colors shadow-2xs font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200/90 hover:border-slate-300 text-slate-700 hover:text-slate-900 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 shadow-xs font-medium"
           >
             <KeyRound className="w-3.5 h-3.5 text-orange-600" />
             <span>修改個人 PIN 碼</span>
@@ -820,7 +850,7 @@ export default function App() {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors shadow-2xs font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200/90 hover:border-rose-200 text-slate-600 hover:text-rose-600 rounded-xl hover:bg-rose-50/60 transition-all hover:-translate-y-0.5 active:scale-95 shadow-xs font-medium"
             title="登出並退回身分鎖定頁"
           >
             <LogOut className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600" />
@@ -835,50 +865,58 @@ export default function App() {
             setReportPhone(currentEmployee.phone || '');
             setIsReportModalOpen(true);
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-300 text-amber-900 rounded-xl hover:bg-amber-500/20 transition-colors shadow-2xs font-medium"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-300/80 hover:border-amber-400 text-amber-900 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 shadow-xs font-semibold"
         >
-          <MessageSquareWarning className="w-3.5 h-3.5 text-amber-700" />
+          <MessageSquareWarning className="w-3.5 h-3.5 text-amber-600" />
           <span>回報問題給老闆</span>
         </button>
       </div>
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-4">
-        {/* 電腦版分頁標籤列 */}
-        <div className="hidden sm:flex items-center gap-1.5 p-1.5 bg-slate-200/80 rounded-2xl mb-6 max-w-xl mx-auto shadow-inner">
+        {/* 電腦版分頁標籤列（Divetek 膠囊滑塊質感） */}
+        <div className="hidden sm:flex items-center gap-1.5 p-1.5 bg-white/80 backdrop-blur-md border border-slate-200/90 rounded-2xl mb-6 max-w-xl mx-auto shadow-sm">
           <button
             onClick={() => { playPunchSound('tap'); setActiveTab('punch'); }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'punch' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+              activeTab === 'punch'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
-            <Clock className="w-4 h-4 text-orange-600" />
+            <Clock className={`w-4 h-4 ${activeTab === 'punch' ? 'text-orange-400' : 'text-slate-400'}`} />
             <span>打卡鐘</span>
           </button>
           <button
             onClick={() => { playPunchSound('tap'); setActiveTab('calendar'); }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'calendar' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+              activeTab === 'calendar'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
-            <Calendar className="w-4 h-4 text-blue-600" />
+            <Calendar className={`w-4 h-4 ${activeTab === 'calendar' ? 'text-blue-400' : 'text-slate-400'}`} />
             <span>打卡日曆</span>
           </button>
           <button
             onClick={() => { playPunchSound('tap'); setActiveTab('sheet'); }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'sheet' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+              activeTab === 'sheet'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <FileSpreadsheet className={`w-4 h-4 ${activeTab === 'sheet' ? 'text-emerald-400' : 'text-slate-400'}`} />
             <span>雲端表單</span>
           </button>
           <button
             onClick={() => { playPunchSound('tap'); setActiveTab('admin'); }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'admin' ? 'bg-white text-amber-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+              activeTab === 'admin'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
             }`}
           >
-            <Shield className="w-4 h-4 text-amber-600" />
+            <Shield className={`w-4 h-4 ${activeTab === 'admin' ? 'text-amber-400' : 'text-slate-400'}`} />
             <span>管理後台</span>
             {!isAdmin && <Lock className="w-3 h-3 text-slate-400 ml-0.5" />}
           </button>
@@ -957,8 +995,8 @@ export default function App() {
         {activeTab === 'admin' && (
           <div className="space-y-4">
             {!isAdmin ? (
-              <div className="bg-white border border-slate-200 rounded-3xl p-8 max-w-md mx-auto text-center space-y-4 shadow-sm">
-                <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
+              <div className="bg-white border border-slate-200/90 rounded-3xl p-8 max-w-md mx-auto text-center space-y-4 shadow-[0_10px_30px_rgba(0,0,0,0.04)]">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
                   <Lock className="w-7 h-7" />
                 </div>
                 <div>
@@ -968,22 +1006,23 @@ export default function App() {
                   </p>
                 </div>
 
-                <div className="pt-2 space-y-2">
+                <div className="pt-2 space-y-2.5">
                   <input
                     type="password"
                     maxLength={6}
                     placeholder="請輸入管理員 PIN 碼解鎖"
                     value={adminUnlockPin}
                     onChange={(e) => { setAdminUnlockPin(e.target.value); setAdminUnlockError(''); }}
-                    className="w-full text-center text-lg tracking-widest font-mono border border-slate-300 bg-slate-50 text-slate-900 rounded-xl py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full text-center text-lg tracking-widest font-mono border border-slate-300 bg-slate-50 text-slate-900 rounded-xl py-2.5 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-inner"
                   />
                   {adminUnlockError && <div className="text-xs text-rose-600 font-semibold">{adminUnlockError}</div>}
                   <button
                     type="button"
                     onClick={handleUnlockAdmin}
-                    className="w-full py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-xs transition-all active:scale-98"
+                    className="w-full py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-md transition-all active:scale-98 flex items-center justify-center gap-1.5"
                   >
-                    驗證解鎖管理後台
+                    <Check className="w-4 h-4 text-orange-400" />
+                    <span>驗證解鎖管理後台</span>
                   </button>
                 </div>
               </div>
@@ -1014,16 +1053,16 @@ export default function App() {
                   }}
                 />
 
-                {/* 僅管理員可見：全體人員 PIN 碼管理 */}
-                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+                {/* 僅管理員可見：全體人員 PIN 碼管理 (安全隱藏模式) */}
+                <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-[0_10px_30px_rgba(0,0,0,0.03)]">
                   <div className="flex items-center gap-2 mb-2">
                     <KeyRound className="w-4 h-4 text-orange-600" />
-                    <h4 className="font-bold text-sm text-slate-900">全體人員 PIN 碼管理 (安全隱藏模式)</h4>
+                    <h4 className="font-bold text-sm text-slate-900 tracking-tight">全體人員 PIN 碼管理 (安全隱藏模式)</h4>
                   </div>
                   <p className="text-xs text-slate-500 mb-4">
                     密碼已預設遮蔽防窺，點擊右側眼睛圖示即可暫時查看明碼。
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     {employees.map((emp) => {
                       const isEmpAdmin = emp.role === 'admin' || emp.name === '吳昱勳';
                       const displayPin = sanitizePin((emp as any).pin, isEmpAdmin ? adminPin : '0000');
@@ -1032,24 +1071,24 @@ export default function App() {
                       return (
                         <div
                           key={emp.id}
-                          className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                          className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-200 ${
                             isEmpAdmin
-                              ? 'border-amber-300 bg-amber-50/60 shadow-2xs'
-                              : 'border-slate-200 bg-slate-50'
+                              ? 'border-amber-300 bg-amber-50/50 shadow-xs'
+                              : 'border-slate-200/90 bg-slate-50/70 hover:bg-white hover:shadow-xs'
                           }`}
                         >
                           <div>
                             <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                               <span>{emp.name}</span>
                               {isEmpAdmin && (
-                                <span className="text-[10px] px-1.5 py-0.2 bg-amber-200 text-amber-900 rounded font-semibold">
+                                <span className="text-[10px] px-1.5 py-0.2 bg-amber-200 text-amber-900 rounded font-semibold border border-amber-300">
                                   管理人
                                 </span>
                               )}
                             </div>
-                            <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1.5">
+                            <div className="text-[11px] text-slate-500 font-mono mt-1 flex items-center gap-1.5">
                               <span>PIN:</span>
-                              <span className="font-bold text-slate-700 tracking-wider">
+                              <span className="font-bold text-slate-800 tracking-wider">
                                 {isRevealed ? displayPin : '••••'}
                               </span>
                               <button
@@ -1071,17 +1110,17 @@ export default function App() {
                                 setAdminTargetNewPin('');
                                 setAdminPinSuccess(false);
                               }}
-                              className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors shadow-2xs"
+                              className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors shadow-2xs active:scale-95"
                             >
                               改密碼
                             </button>
                             <button
                               type="button"
                               onClick={() => handleResetUserPin(emp.id)}
-                              className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors flex items-center gap-0.5 ${
+                              className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors flex items-center gap-0.5 active:scale-95 ${
                                 isEmpAdmin
-                                  ? 'text-amber-800 bg-amber-200 hover:bg-amber-300'
-                                  : 'text-orange-700 bg-orange-100 hover:bg-orange-200'
+                                  ? 'text-amber-800 bg-amber-200/80 hover:bg-amber-300'
+                                  : 'text-orange-700 bg-orange-100/90 hover:bg-orange-200'
                               }`}
                               title={isEmpAdmin ? '恢復為 8888' : '恢復為 0000'}
                             >
@@ -1106,38 +1145,38 @@ export default function App() {
           <button
             onClick={() => { playPunchSound('tap'); setActiveTab('punch'); }}
             className={`flex flex-col items-center justify-center h-full transition-colors ${
-              activeTab === 'punch' ? 'text-orange-600' : 'text-slate-400'
+              activeTab === 'punch' ? 'text-orange-600 font-bold' : 'text-slate-400'
             }`}
           >
             <Clock className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">打卡鐘</span>
+            <span className="text-[10px] mt-1">打卡鐘</span>
           </button>
           <button
             onClick={() => { playPunchSound('tap'); setActiveTab('calendar'); }}
             className={`flex flex-col items-center justify-center h-full transition-colors ${
-              activeTab === 'calendar' ? 'text-blue-600' : 'text-slate-400'
+              activeTab === 'calendar' ? 'text-blue-600 font-bold' : 'text-slate-400'
             }`}
           >
             <Calendar className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">打卡日曆</span>
+            <span className="text-[10px] mt-1">打卡日曆</span>
           </button>
           <button
             onClick={() => { playPunchSound('tap'); setActiveTab('sheet'); }}
             className={`flex flex-col items-center justify-center h-full transition-colors ${
-              activeTab === 'sheet' ? 'text-emerald-600' : 'text-slate-400'
+              activeTab === 'sheet' ? 'text-emerald-600 font-bold' : 'text-slate-400'
             }`}
           >
             <FileSpreadsheet className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">雲端表單</span>
+            <span className="text-[10px] mt-1">雲端表單</span>
           </button>
           <button
             onClick={() => { playPunchSound('tap'); setActiveTab('admin'); }}
             className={`flex flex-col items-center justify-center h-full transition-colors ${
-              activeTab === 'admin' ? 'text-amber-600' : 'text-slate-400'
+              activeTab === 'admin' ? 'text-amber-600 font-bold' : 'text-slate-400'
             }`}
           >
             <Shield className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">管理後台</span>
+            <span className="text-[10px] mt-1">管理後台</span>
           </button>
         </div>
       </nav>
@@ -1194,7 +1233,7 @@ export default function App() {
                   <div className="text-center py-1">
                     <div className="text-xs text-slate-500">正在切換至</div>
                     <div className="text-lg font-bold text-slate-900">{switchTargetUser.name}</div>
-                    <div className="text-xs text-orange-600 mt-0.5">
+                    <div className="text-xs text-orange-600 mt-0.5 font-medium">
                       {switchTargetUser.role === 'admin' || switchTargetUser.name === '吳昱勳'
                         ? '管理員 PIN 碼 (預設: 8888)'
                         : '員工打卡 PIN 碼 (預設: 0000)'}
@@ -1217,7 +1256,6 @@ export default function App() {
 
                   {switchPinError && <div className="text-xs text-rose-600 text-center font-semibold">{switchPinError}</div>}
 
-                  {/* 虛擬數字鍵盤 */}
                   <VirtualKeypad
                     onDigit={(d) => {
                       if (switchInputPin.length < 6) {
@@ -1246,9 +1284,9 @@ export default function App() {
                     <button
                       type="button"
                       onClick={handleConfirmSwitchWithPin}
-                      className="flex-1 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl flex items-center justify-center gap-1 shadow-xs"
+                      className="flex-1 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl flex items-center justify-center gap-1 shadow-xs"
                     >
-                      <Check className="w-4 h-4" />
+                      <Check className="w-4 h-4 text-orange-400" />
                       <span>確認切換</span>
                     </button>
                   </div>
@@ -1314,9 +1352,9 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleAdminChangeTargetPinConfirm}
-                  className="flex-1 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl flex items-center justify-center gap-1 shadow-xs"
+                  className="flex-1 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl flex items-center justify-center gap-1 shadow-xs"
                 >
-                  <Check className="w-4 h-4" />
+                  <Check className="w-4 h-4 text-orange-400" />
                   <span>確認儲存</span>
                 </button>
               </div>
@@ -1340,7 +1378,7 @@ export default function App() {
             </div>
 
             <form onSubmit={handleChangePinSubmit} className="p-5 space-y-3">
-              <div className="text-xs text-slate-600 bg-slate-100 p-2.5 rounded-xl">
+              <div className="text-xs text-slate-600 bg-slate-100 p-2.5 rounded-xl font-medium">
                 當前人員：<span className="font-bold text-slate-900">{currentEmployee.name}</span>
               </div>
 
@@ -1417,7 +1455,7 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-xs"
+                  className="flex-1 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-xs"
                 >
                   確認修改
                 </button>
@@ -1511,9 +1549,9 @@ export default function App() {
                 <button
                   type="submit"
                   disabled={isSendingReport}
-                  className="flex-1 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                  className="flex-1 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-black rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
                 >
-                  <Send className="w-3.5 h-3.5" />
+                  <Send className="w-3.5 h-3.5 text-orange-400" />
                   <span>{isSendingReport ? '正在寄送信件...' : '送出問題回報'}</span>
                 </button>
               </div>
