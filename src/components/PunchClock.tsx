@@ -29,7 +29,7 @@ interface PunchClockProps {
 
 // Helper to extract unique sites from records within the last 14 days
 const getRecentSitesFromRecords = (recordsList?: PunchRecord[]): string[] => {
-  if (!recordsList || recordsList.length === 0) return ['板橋民權路華廈翻修'];
+  if (!recordsList || recordsList.length === 0) return [''];
   const now = new Date();
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   const fourteenDaysAgoStr = fourteenDaysAgo.toISOString().split('T')[0];
@@ -39,7 +39,7 @@ const getRecentSitesFromRecords = (recordsList?: PunchRecord[]): string[] => {
     .map((r) => r.siteName.trim());
 
   const unique = Array.from(new Set(recent));
-  return unique.length > 0 ? unique : ['板橋民權路華廈翻修'];
+  return unique.length > 0 ? unique : [''];
 };
 
 export const PunchClock: React.FC<PunchClockProps> = ({
@@ -101,7 +101,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
   };
 
   const [selectedSite, setSelectedSite] = useState(
-    todayRecord?.siteName || sites[0] || '板橋民權路華廈翻修'
+    todayRecord?.siteName || sites[0] || ''
   );
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
@@ -110,7 +110,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
   const [punchNotes, setPunchNotes] = useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [locationText, setLocationText] = useState(
-    todayRecord?.location?.address || '新北市現場施工'
+    todayRecord?.location?.address || '施工位置'
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -279,7 +279,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
         <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center justify-between">
           <span className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-orange-600" />
-            本日出勤打卡狀態
+            出勤狀態
           </span>
           {isPunchedOut ? (
             <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
@@ -288,7 +288,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
           ) : isPunchedIn ? (
             <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-              現場施工中 · 累計 {elapsedHoursText}
+              施工中 · 累計 {elapsedHoursText}
             </span>
           ) : (
             <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
@@ -340,7 +340,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
           <div className="mt-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-amber-600" />
-              此筆紀錄由管理員 (薄老闆) 審核修訂
+              此筆紀錄由管理員審核修訂
             </span>
             {isAdmin && onEditRecord && (
               <button
@@ -657,7 +657,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
         <div className="text-xs text-slate-500 flex items-start gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
           <AlertCircle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
           <span>
-            <strong>出勤規範說明：</strong> 本工程行師傅及員工採日薪制核算。員工本人僅可打上班與下班卡，無法自行修改歷史打卡紀錄；如有遺漏或時間需修正，請於次日前向管理人（薄老闆）回報進行系統補登。
+            <strong>出勤規範說明：</strong> 本工程行師傅及員工採日薪制核算。員工本人僅可打上班與下班卡，無法自行修改歷史打卡紀錄；如有遺漏或時間需修正，請於次日前向管理員回報進行系統補登。
           </span>
         </div>
       </div>
