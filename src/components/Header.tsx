@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Employee } from '../types';
 import { ChevronDown } from 'lucide-react';
+// 直接匯入你的 LOGO 圖片，Vite 會自動處理正確路徑
+import boboLogo from '../assets/images/bobo_logo.jpg';
 
 interface HeaderProps {
   currentEmployee: Employee;
@@ -43,9 +45,8 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-10 h-10 rounded-xl overflow-hidden bg-black border border-slate-800 flex items-center justify-center shrink-0 shadow-sm">
             <img
-              src="/assets/aistudio/863124797_18147268753527563_3107301639635258165_n_8751ed07.jpg"
+              src={boboLogo}
               alt="薄薄工程行"
-              referrerPolicy="no-referrer"
               className="w-full h-full object-contain p-0.5"
             />
           </div>
@@ -76,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Single stable Identity Button without thumbnail */}
+          {/* Single stable Identity Button */}
           {(() => {
             const activeEmployee =
               employees.find((e) => e.id === currentEmployee.id) || currentEmployee;
