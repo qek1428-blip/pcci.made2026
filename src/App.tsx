@@ -809,7 +809,7 @@ export default function App() {
 
   // 3. 系統主畫面（Divetek 工業精密風格注入）
   return (
-    <div className="min-h-screen bg-slate-50/90 flex flex-col antialiased text-slate-900 pb-20 sm:pb-8 selection:bg-orange-500 selection:text-white">
+    <div className="min-h-screen bg-taupe-700/100 flex flex-col antialiased text-slate-900 pb-20 sm:pb-8 selection:bg-orange-500 selection:text-white">
       {/* 頂端標題導覽列 */}
       <Header
         currentEmployee={currentEmployee}
