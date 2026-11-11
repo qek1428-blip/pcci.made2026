@@ -12,6 +12,45 @@ import { playPunchSound } from './utils/sound';
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhrpQIs-ygEFPOhVM8tafjpjSccqGMcsZ2-41WuxvEL-N9jXWi7eJVTpkKqD1wYEBX/exec';
 
+// 格式化日期為 YYYY-MM-DD，相容 Google 試算表傳來的各種格式
+const formatRecordDate = (val: any): string => {
+  if (!val) return '';
+  const str = String(val).trim();
+  const ymdMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (ymdMatch) {
+    return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`;
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return str;
+};
+
+// 格式化時間為 HH:mm:ss，相容 8:00:00 或 Date 字串
+const formatRecordTime = (val: any): string => {
+  if (!val) return '';
+  const str = String(val).trim();
+  const timeMatch = str.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+  if (timeMatch) {
+    const hh = timeMatch[1].padStart(2, '0');
+    const mm = timeMatch[2].padStart(2, '0');
+    const ss = timeMatch[3] ? timeMatch[3].padStart(2, '0') : '00';
+    return `${hh}:${mm}:${ss}`;
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
+  }
+  return str;
+};
+
 export default function App() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [records, setRecords] = useState<PunchRecord[]>([]);
@@ -74,8 +113,19 @@ export default function App() {
         }
 
         if (data.records) {
-          setRecords(data.records);
+          // 校正並標準化所有打卡紀錄的日期與時間格式
+          const sanitizedRecords: PunchRecord[] = data.records.map((r: any) => ({
+            ...r,
+            date: formatRecordDate(r.date),
+            clockInTime: formatRecordTime(r.clockInTime),
+            clockOutTime: r.clockOutTime ? formatRecordTime(r.clockOutTime) : '',
+            durationHours: Number(r.durationHours) || (r.clockOutTime ? 8.5 : 0),
+            wageMultiplier: Number(r.wageMultiplier) || 1.0,
+            calculatedWage: Number(r.calculatedWage) || 0,
+          }));
+          setRecords(sanitizedRecords);
         }
+
         if (data.settings?.adminPin) {
           setAdminPin(data.settings.adminPin);
         }
@@ -157,20 +207,20 @@ export default function App() {
     });
   };
 
-  // 3. 管理員儲存/補登紀錄（即時更新畫面）
+  // 3. 管理員儲存/補登紀錄
   const handleSaveRecord = async (data: Partial<PunchRecord>) => {
     const recordId = data.id || `rec-${data.date || todayStr}-${data.employeeId}-${Date.now()}`;
     const newRecord: PunchRecord = {
       id: recordId,
       employeeId: data.employeeId || '',
       employeeName: data.employeeName || '員工',
-      date: data.date || todayStr,
-      clockInTime: data.clockInTime || '08:00:00',
-      clockOutTime: data.clockOutTime || '17:30:00',
+      date: formatRecordDate(data.date || todayStr),
+      clockInTime: formatRecordTime(data.clockInTime || '08:00:00'),
+      clockOutTime: data.clockOutTime ? formatRecordTime(data.clockOutTime) : '17:30:00',
       siteName: data.siteName || '',
-      wageMultiplier: data.wageMultiplier !== undefined ? data.wageMultiplier : 1.0,
-      calculatedWage: data.calculatedWage || 0,
-      durationHours: data.durationHours || 8.5,
+      wageMultiplier: data.wageMultiplier !== undefined ? Number(data.wageMultiplier) : 1.0,
+      calculatedWage: Number(data.calculatedWage) || 0,
+      durationHours: Number(data.durationHours) || 8.5,
       notes: data.notes || '',
       adminNote: data.adminNote || '管理員手動補登',
       modifiedByAdmin: true,
@@ -179,7 +229,6 @@ export default function App() {
       ...data,
     } as PunchRecord;
 
-    // 關鍵修復：立刻在畫面上更新，不需等待 Google 試算表回傳
     setRecords((prev) => {
       const exists = prev.some((r) => r.id === recordId);
       if (exists) {
