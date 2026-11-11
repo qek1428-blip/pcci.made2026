@@ -14,6 +14,28 @@ interface EditRecordModalProps {
   initialEmployeeId?: string;
 }
 
+// 工時與工數計算函式：未滿4小時算0.5工，9小時扣1小時休息為1工
+export const calculateWorkStats = (inTime: string, outTime: string, dailyRate: number) => {
+  if (!inTime || !outTime) {
+    return { durationHours: 0, wageMultiplier: 1.0, calculatedWage: dailyRate };
+  }
+  const [inH, inM = 0] = inTime.split(':').map(Number);
+  const [outH, outM = 0] = outTime.split(':').map(Number);
+  let diffMinutes = (outH * 60 + outM) - (inH * 60 + inM);
+  if (diffMinutes < 0) diffMinutes += 24 * 60; // 跨午夜防呆
+
+  const rawHours = diffMinutes / 60;
+  // 滿 5 小時扣除 1 小時休息時間（9小時在場 -> 8小時工時）
+  let netHours = rawHours >= 5 ? Math.max(4, rawHours - 1) : rawHours;
+  netHours = Math.round(netHours * 10) / 10;
+
+  // 未滿 4 小時算 0.5 工，滿 4 小時算 1.0 工（暫時移除加班倍率）
+  const wageMultiplier = rawHours < 4 ? 0.5 : 1.0;
+  const calculatedWage = Math.round(dailyRate * wageMultiplier);
+
+  return { durationHours: netHours, wageMultiplier, calculatedWage };
+};
+
 export const EditRecordModal: React.FC<EditRecordModalProps> = ({
   isOpen,
   onClose,
@@ -35,12 +57,12 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const [clockInTime, setClockInTime] = useState(
     record?.clockInTime || '08:00:00'
   );
+  // 預設下班時間改為 17:00:00，若是建立模式且需留空可自由清空
   const [clockOutTime, setClockOutTime] = useState(
-    record?.clockOutTime || '17:30:00'
+    record?.clockOutTime !== undefined ? record.clockOutTime : (isCreating ? '17:00:00' : '')
   );
-  const [siteName, setSiteName] = useState(
-    record?.siteName || '板橋民權路華廈翻修'
-  );
+  // 施工案場全面留空
+  const [siteName, setSiteName] = useState(record?.siteName || '');
   const [wageMultiplier, setWageMultiplier] = useState<number>(
     record?.wageMultiplier !== undefined ? record.wageMultiplier : 1.0
   );
@@ -53,14 +75,14 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 當開啟視窗或傳入紀錄變更時同步設定表單
+  // 表單初始化同步
   useEffect(() => {
     if (record) {
       setEmployeeId(record.employeeId);
       setDate(record.date);
       setClockInTime(record.clockInTime);
-      setClockOutTime(record.clockOutTime || '17:30:00');
-      setSiteName(record.siteName);
+      setClockOutTime(record.clockOutTime || '');
+      setSiteName(record.siteName || '');
       setWageMultiplier(record.wageMultiplier !== undefined ? record.wageMultiplier : 1.0);
       setCalculatedWage(record.calculatedWage || 3000);
       setNotes(record.notes || '');
@@ -70,8 +92,8 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
       setEmployeeId(defaultEmpId);
       setDate(initialDate || new Date().toISOString().split('T')[0]);
       setClockInTime('08:00:00');
-      setClockOutTime('17:30:00');
-      setSiteName('板橋民權路華廈翻修');
+      setClockOutTime('17:00:00');
+      setSiteName(''); // 施工案場留空
       setWageMultiplier(1.0);
       const defaultEmp = employees.find((e) => e.id === defaultEmpId);
       setCalculatedWage(defaultEmp?.dailyRate || 3000);
@@ -80,13 +102,20 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
     }
   }, [record, initialDate, initialEmployeeId, employees, isOpen]);
 
-  // 當更換人員或工數倍率時自動重新計算工資
+  // 當調整上下班時間或切換人員時，自動試算工數與工資
   useEffect(() => {
     const emp = employees.find((e) => e.id === employeeId);
-    if (emp) {
-      setCalculatedWage(Math.round(emp.dailyRate * wageMultiplier));
+    const dailyRate = emp?.dailyRate || 3000;
+    if (clockInTime && clockOutTime.trim()) {
+      const stats = calculateWorkStats(clockInTime, clockOutTime.trim(), dailyRate);
+      setWageMultiplier(stats.wageMultiplier);
+      setCalculatedWage(stats.calculatedWage);
+    } else {
+      // 若下班留空，預設 1.0 工日薪
+      setWageMultiplier(1.0);
+      setCalculatedWage(dailyRate);
     }
-  }, [employeeId, wageMultiplier, employees]);
+  }, [employeeId, clockInTime, clockOutTime, employees]);
 
   if (!isOpen) return null;
 
@@ -103,15 +132,23 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
     setIsSubmitting(true);
     try {
       const emp = employees.find((e) => e.id === targetEmpId);
+      const cleanClockOut = clockOutTime.trim();
+      let durationHours = 0;
+      if (cleanClockOut) {
+        const stats = calculateWorkStats(clockInTime, cleanClockOut, emp?.dailyRate || 3000);
+        durationHours = stats.durationHours;
+      }
+
       await onSaveRecord({
         ...(record ? { id: record.id } : {}),
         employeeId: targetEmpId,
         employeeName: emp ? emp.name : '員工',
         date,
         clockInTime,
-        clockOutTime: clockOutTime || '17:30:00',
-        siteName,
-        durationHours: 8.5,
+        // 若下班時間留空，則傳入空字串，使打卡鐘能識別為「尚未下班」
+        clockOutTime: cleanClockOut || '',
+        siteName: siteName.trim(),
+        durationHours,
         wageMultiplier,
         calculatedWage,
         notes,
@@ -217,11 +254,11 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                下班打卡時間 (未打請留空)
+                下班打卡時間 <span className="text-slate-400 font-normal">(未下班請留空)</span>
               </label>
               <input
                 type="text"
-                placeholder="17:30:00"
+                placeholder="17:00:00 (留空即代表未下班)"
                 value={clockOutTime}
                 onChange={(e) => setClockOutTime(e.target.value)}
                 className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -229,7 +266,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
             </div>
           </div>
 
-          {/* 工數折算與計算工資 */}
+          {/* 工數折算與計算工資（已移除加班選項） */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -237,14 +274,16 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
               </label>
               <select
                 value={wageMultiplier}
-                onChange={(e) => setWageMultiplier(Number(e.target.value))}
+                onChange={(e) => {
+                  const m = Number(e.target.value);
+                  setWageMultiplier(m);
+                  const emp = employees.find((x) => x.id === employeeId);
+                  setCalculatedWage(Math.round((emp?.dailyRate || 3000) * m));
+                }}
                 className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold text-blue-700"
               >
                 <option value="1.0">1.0 工 (正常全日工)</option>
-                <option value="0.5">0.5 工 (半天工)</option>
-                <option value="1.25">1.25 工 (加班/夜間)</option>
-                <option value="1.5">1.5 工 (重大搶工加班)</option>
-                <option value="2.0">2.0 工 (雙工特勤)</option>
+                <option value="0.5">0.5 工 (未滿4小時/半天工)</option>
               </select>
             </div>
 
@@ -262,14 +301,14 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
             </div>
           </div>
 
-          {/* 施工案場 */}
+          {/* 施工案場（預設留空） */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              施工案場 / 地點
+              施工案場 / 地點 <span className="text-slate-400 font-normal">(選填)</span>
             </label>
             <input
               type="text"
-              required
+              placeholder="請輸入施工案場名稱（無可留空）"
               value={siteName}
               onChange={(e) => setSiteName(e.target.value)}
               className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -285,7 +324,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
               type="text"
               value={adminNote}
               onChange={(e) => setAdminNote(e.target.value)}
-              placeholder="例如：忘記打卡補登、現場加班補登"
+              placeholder="例如：忘記打卡補登、現場提早收工補登"
               className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
