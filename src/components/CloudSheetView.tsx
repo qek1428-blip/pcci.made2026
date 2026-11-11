@@ -132,7 +132,7 @@ export const CloudSheetView: React.FC<CloudSheetViewProps> = ({
 
         <div className="bg-white p-3 sm:p-4 rounded-xl border border-taupe-200 shadow-xs">
           <span className="text-[11px] sm:text-xs text-taupe-500 font-medium">總工數</span>
-          <div className="text-base sm:text-lg font-bold font-mono text-blue-600 mt-0.5 tabular-nums truncate">
+          <div className="text-base sm:text-lg font-bold font-mono text-taupe-600 mt-0.5 tabular-nums truncate">
             {totalUnits.toFixed(1)} <span className="text-xs font-normal text-taupe-500">工</span>
           </div>
         </div>
@@ -288,7 +288,7 @@ export const CloudSheetView: React.FC<CloudSheetViewProps> = ({
                       <td className="py-3 px-3 text-right font-mono font-bold text-taupe-600 whitespace-nowrap tabular-nums">
                         {rec.durationHours !== undefined ? `${rec.durationHours}h` : '-'}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-blue-600 whitespace-nowrap tabular-nums font-semibold">
+                      <td className="py-3 px-3 text-right font-mono text-taupe-600 whitespace-nowrap tabular-nums font-semibold">
                         {rec.wageMultiplier ? `${rec.wageMultiplier} 工` : '1.0 工'}
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-bold text-taupe-700 whitespace-nowrap tabular-nums">
