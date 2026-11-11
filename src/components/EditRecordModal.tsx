@@ -171,23 +171,23 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-200">
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-taupe-900/60 backdrop-blur-xs">
+      <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-taupe-200">
+        <div className="px-6 py-4 bg-taupe-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-amber-400" />
+            <Shield className="w-5 h-5 text-taupe-400" />
             <div>
               <h3 className="font-bold text-base">
                 {isCreating ? '管理員手動補登打卡' : '管理員修正打卡時間與工數'}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-taupe-400">
                 薄薄工程行 · 僅管理員 (薄老闆) 具備此修改權限
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-taupe-400 hover:text-white hover:bg-taupe-800"
           >
             <X className="w-5 h-5" />
           </button>
@@ -197,7 +197,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
           {/* 出勤人員與日期 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-taupe-700 mb-1">
                 出勤人員
               </label>
               <select
@@ -208,7 +208,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                   handleTimeOrUserChange(val, clockInTime, clockOutTime);
                 }}
                 required
-                className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
+                className="w-full text-xs sm:text-sm border border-taupe-300 rounded-xl px-3 py-2 bg-taupe-50 focus:outline-none focus:ring-2 focus:ring-taupe-500 font-medium"
               >
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
@@ -219,7 +219,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-taupe-700 mb-1">
                 打卡日期
               </label>
               <input
@@ -227,7 +227,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full text-xs sm:text-sm border border-taupe-300 rounded-xl px-3 py-2 bg-taupe-50 focus:outline-none focus:ring-2 focus:ring-taupe-500"
               />
             </div>
           </div>
@@ -235,7 +235,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
           {/* 上下班時間 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-taupe-700 mb-1">
                 上班打卡時間
               </label>
               <input
@@ -248,14 +248,14 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                   setClockInTime(val);
                   handleTimeOrUserChange(employeeId, val, clockOutTime);
                 }}
-                className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full text-xs sm:text-sm border border-taupe-300 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-taupe-500"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-700">
-                  下班時間 <span className="text-slate-400 font-normal">(留空=出勤中)</span>
+                <label className="text-xs font-semibold text-taupe-700">
+                  下班時間 <span className="text-taupe-400 font-normal">(留空=出勤中)</span>
                 </label>
                 <div className="flex gap-1">
                   <button
@@ -264,11 +264,11 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                       setClockOutTime('');
                       handleTimeOrUserChange(employeeId, clockInTime, '');
                     }}
-                    className="text-[10px] text-slate-500 hover:text-orange-600 underline"
+                    className="text-[10px] text-taupe-500 hover:text-taupe-600 underline"
                   >
                     清空(出勤中)
                   </button>
-                  <span className="text-slate-300 text-[10px]">|</span>
+                  <span className="text-taupe-300 text-[10px]">|</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -290,7 +290,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                   setClockOutTime(val);
                   handleTimeOrUserChange(employeeId, clockInTime, val);
                 }}
-                className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full text-xs sm:text-sm border border-taupe-300 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-taupe-500"
               />
             </div>
           </div>
@@ -298,7 +298,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
           {/* 工數折算與計算工資 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-taupe-700 mb-1">
                 工數折算 (工)
               </label>
               <select
@@ -309,7 +309,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                   const emp = employees.find((x) => x.id === employeeId);
                   setCalculatedWage(Math.round((emp?.dailyRate || 3000) * m));
                 }}
-                className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold text-blue-700"
+                className="w-full text-xs sm:text-sm border border-taupe-300 rounded-xl px-3 py-2 bg-taupe-50 focus:outline-none focus:ring-2 focus:ring-taupe-500 font-bold text-blue-700"
               >
                 <option value="1.0">1.0 工 (正常全日工)</option>
                 <option value="0.5">0.5 工 (未滿4小時/半天工)</option>
@@ -317,7 +317,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-taupe-700 mb-1">
                 核發日薪工資 (NT$)
               </label>
               <input
@@ -325,28 +325,28 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 step="50"
                 value={calculatedWage}
                 onChange={(e) => setCalculatedWage(Number(e.target.value))}
-                className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 font-mono font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full text-xs sm:text-sm border border-taupe-300 rounded-xl px-3 py-2 font-mono font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-taupe-500"
               />
             </div>
           </div>
 
           {/* 施工案場 */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              施工案場 / 地點 <span className="text-slate-400 font-normal">(選填)</span>
+            <label className="block text-xs font-semibold text-taupe-700 mb-1">
+              施工案場 / 地點 <span className="text-taupe-400 font-normal">(選填)</span>
             </label>
             <input
               type="text"
               placeholder="請輸入施工案場名稱（無可留空）"
               value={siteName}
               onChange={(e) => setSiteName(e.target.value)}
-              className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full text-xs sm:text-sm border border-taupe-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-taupe-500"
             />
           </div>
 
           {/* 管理員備註 */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-taupe-700 mb-1">
               管理員修正事由備註
             </label>
             <input
@@ -354,12 +354,12 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
               value={adminNote}
               onChange={(e) => setAdminNote(e.target.value)}
               placeholder="例如：忘記打卡補登、提早收工補登"
-              className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full text-xs sm:text-sm border border-taupe-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-taupe-500"
             />
           </div>
 
           {/* 按鈕區 */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+          <div className="pt-3 border-t border-taupe-100 flex items-center justify-between">
             {!isCreating && onDeleteRecord ? (
               <button
                 type="button"
@@ -378,14 +378,14 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50"
+                className="px-4 py-2 text-xs font-semibold text-taupe-600 border border-taupe-200 rounded-xl hover:bg-taupe-50"
               >
                 取消
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-5 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                className="px-5 py-2 text-xs font-bold text-white bg-taupe-600 hover:bg-taupe-700 rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
                 <span>儲存至雲端</span>
