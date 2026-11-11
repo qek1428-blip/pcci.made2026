@@ -325,7 +325,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 step="50"
                 value={calculatedWage}
                 onChange={(e) => setCalculatedWage(Number(e.target.value))}
-                className="w-full text-xs sm:text-sm border border-taupe-300 rounded-xl px-3 py-2 font-mono font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-taupe-500"
+                className="w-full text-xs sm:text-sm border border-taupe-300 rounded-xl px-3 py-2 font-mono font-bold text-taupe-700 focus:outline-none focus:ring-2 focus:ring-taupe-500"
               />
             </div>
           </div>
