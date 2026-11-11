@@ -5,8 +5,8 @@ import { CalendarView } from './components/CalendarView';
 import { CloudSheetView } from './components/CloudSheetView';
 import { AdminPanel } from './components/AdminPanel';
 import { EditRecordModal, calculateWorkStats } from './components/EditRecordModal';
-import { Employee, PunchRecord, CompanyState } from './types';
-import { Clock, Calendar, FileSpreadsheet, Shield, KeyRound, MessageSquareWarning, X, Check, Lock, RefreshCw, Send, Delete, Eye, EyeOff, LogOut } from 'lucide-react';
+import { Employee, PunchRecord, BonusRecord, CompanyState } from './types';
+import { Clock, Calendar, FileSpreadsheet, Shield, KeyRound, MessageSquareWarning, X, Check, Lock, RefreshCw, Send, Delete, Eye, EyeOff, LogOut, Coins, Plus, Trash2 } from 'lucide-react';
 import { playPunchSound } from './utils/sound';
 
 import splashImg from './assets/images/splash.jpg';
@@ -14,7 +14,6 @@ import boboLogo from './assets/images/bobo_logo.jpg';
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhrpQIs-ygEFPOhVM8tafjpjSccqGMcsZ2-41WuxvEL-N9jXWi7eJVTpkKqD1wYEBX/exec';
 
-// PIN 碼格式化防呆：嚴格確保 4 位數
 const sanitizePin = (pinVal: any, defaultPin: string = '0000'): string => {
   if (pinVal === null || pinVal === undefined || pinVal === '') return defaultPin;
   let s = String(pinVal).trim();
@@ -64,6 +63,7 @@ const formatRecordTime = (val: any): string => {
 export default function App() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [records, setRecords] = useState<PunchRecord[]>([]);
+  const [bonuses, setBonuses] = useState<BonusRecord[]>([]);
   const [adminPin, setAdminPin] = useState('8888');
 
   // 登入驗證狀態
@@ -87,6 +87,14 @@ export default function App() {
   const [editingRecord, setEditingRecord] = useState<PunchRecord | null>(null);
   const [manualDate, setManualDate] = useState<string | undefined>();
   const [manualEmployeeId, setManualEmployeeId] = useState<string | undefined>();
+
+  // 薪資加給新增彈窗
+  const [isBonusModalOpen, setIsBonusModalOpen] = useState(false);
+  const [bonusEmpId, setBonusEmpId] = useState('ALL');
+  const [bonusDate, setBonusDate] = useState(new Date().toISOString().split('T')[0]);
+  const [bonusAmount, setBonusAmount] = useState<number | ''>('');
+  const [bonusNote, setBonusNote] = useState('');
+  const [isSavingBonus, setIsSavingBonus] = useState(false);
 
   // 系統內切換人員彈窗
   const [isUserSwitchOpen, setIsUserSwitchOpen] = useState(false);
@@ -197,6 +205,19 @@ export default function App() {
           setRecords(sanitizedRecords);
         }
 
+        if (data.bonuses) {
+          const sanitizedBonuses: BonusRecord[] = data.bonuses.map((b: any) => ({
+            id: String(b.id),
+            date: formatRecordDate(b.date),
+            employeeId: String(b.employeeId),
+            employeeName: String(b.employeeName),
+            amount: Number(b.amount) || 0,
+            note: String(b.note || ''),
+            createdAt: String(b.createdAt || '')
+          }));
+          setBonuses(sanitizedBonuses);
+        }
+
         if (data.settings?.adminPin) {
           setAdminPin(sanitizePin(data.settings.adminPin, '8888'));
         }
@@ -243,7 +264,6 @@ export default function App() {
     }
   };
 
-  // 登出鎖定
   const handleLogout = () => {
     setIsAuthenticated(false);
     setCurrentEmployee(null);
@@ -255,7 +275,7 @@ export default function App() {
     playPunchSound('tap');
   };
 
-  // 上班打卡
+  // 打卡相關
   const handlePunchIn = async (siteName: string, notes: string, locationStr?: string) => {
     if (!currentEmployee) return;
     const now = new Date();
@@ -282,7 +302,6 @@ export default function App() {
     await sendToGoogleSheet({ action: 'saveRecord', record: newRecord });
   };
 
-  // 下班打卡
   const handlePunchOut = async (notes?: string) => {
     if (!currentEmployee) return;
     const now = new Date();
@@ -316,7 +335,7 @@ export default function App() {
     await sendToGoogleSheet({ action: 'saveRecord', record: updatedRecord });
   };
 
-  // 補登 / 修正紀錄
+  // 補登 / 修正出勤紀錄
   const handleSaveRecord = async (data: Partial<PunchRecord>) => {
     const recordId = data.id || `rec-${data.date || todayStr}-${data.employeeId}-${Date.now()}`;
     const cleanClockOut = data.clockOutTime ? formatRecordTime(data.clockOutTime) : '';
@@ -356,6 +375,63 @@ export default function App() {
     await sendToGoogleSheet({ action: 'deleteRecord', id: recordId });
   };
 
+  // 薪資加給送出 (支援單一員工或全員共同加給)
+  const handleSaveBonusSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin) {
+      alert('⚠️ 僅管理人 (薄老闆) 具備新增加給費用之權限！');
+      return;
+    }
+    const numAmount = Number(bonusAmount);
+    if (!numAmount || numAmount <= 0) {
+      alert('請填寫有效的加給金額！');
+      return;
+    }
+
+    setIsSavingBonus(true);
+    try {
+      const targets = bonusEmpId === 'ALL'
+        ? employees
+        : employees.filter((e) => e.id === bonusEmpId);
+
+      for (const target of targets) {
+        const newBonus: BonusRecord = {
+          id: `bon-${bonusDate}-${target.id}-${Date.now()}`,
+          date: bonusDate,
+          employeeId: target.id,
+          employeeName: target.name,
+          amount: numAmount,
+          note: bonusNote.trim() || '管理員薪資加給',
+          createdAt: new Date().toISOString(),
+        };
+
+        setBonuses((prev) => [newBonus, ...prev]);
+        await sendToGoogleSheet({ action: 'saveBonus', bonus: newBonus });
+      }
+
+      playPunchSound('in');
+      setIsBonusModalOpen(false);
+      setBonusAmount('');
+      setBonusNote('');
+    } catch (err) {
+      console.error('新增加給失敗:', err);
+    } finally {
+      setIsSavingBonus(false);
+    }
+  };
+
+  const handleDeleteBonus = async (bonusId: string) => {
+    if (!isAdmin) {
+      alert('⚠️ 僅管理人具備刪除加給權限！');
+      return;
+    }
+    if (window.confirm('確定要刪除這筆加給費用嗎？')) {
+      setBonuses((prev) => prev.filter((b) => b.id !== bonusId));
+      await sendToGoogleSheet({ action: 'deleteBonus', id: bonusId });
+      playPunchSound('tap');
+    }
+  };
+
   const handleAddEmployee = async (empData: Partial<Employee>) => {
     await sendToGoogleSheet({ action: 'addEmployee', employee: empData });
   };
@@ -372,7 +448,7 @@ export default function App() {
     await sendToGoogleSheet({ action: 'deleteEmployee', id });
   };
 
-  // 系統內切換人員（嚴格權限隔離）
+  // 切換人員
   const handleConfirmSwitchWithPin = () => {
     if (!switchTargetUser) return;
 
@@ -411,7 +487,6 @@ export default function App() {
     }
   };
 
-  // 管理後台未授權解鎖
   const handleUnlockAdmin = () => {
     if (sanitizePin(adminUnlockPin) === sanitizePin(adminPin, '8888')) {
       setIsAdmin(true);
@@ -424,7 +499,6 @@ export default function App() {
     }
   };
 
-  // 密碼遮蔽切換
   const toggleRevealPin = (empId: string) => {
     setRevealedPins((prev) => ({
       ...prev,
@@ -432,7 +506,6 @@ export default function App() {
     }));
   };
 
-  // 管理員修改成員 PIN 碼
   const handleAdminChangeTargetPinConfirm = async () => {
     if (!adminEditTarget) return;
     const finalPin = sanitizePin(adminTargetNewPin);
@@ -462,7 +535,6 @@ export default function App() {
     }, 1200);
   };
 
-  // 管理員一鍵重設成員 PIN 碼
   const handleResetUserPin = async (empId: string) => {
     if (!isAdmin) {
       alert('需管理員權限才可重設密碼！');
@@ -489,7 +561,6 @@ export default function App() {
     }
   };
 
-  // 個人修改密碼
   const handleChangePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentEmployee) return;
@@ -540,7 +611,6 @@ export default function App() {
     }, 1200);
   };
 
-  // 送出問題回報
   const handleSendReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reportDesc.trim()) {
@@ -571,7 +641,6 @@ export default function App() {
     }
   };
 
-  // 灰駝色系觸控數字鍵盤
   const VirtualKeypad = ({
     onDigit,
     onDelete,
@@ -616,7 +685,7 @@ export default function App() {
     </div>
   );
 
-  // 1. 初次載入畫面（保留黑底名片開場）
+  // 開場名片載入
   if (!isDataLoaded) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white select-none">
@@ -646,12 +715,11 @@ export default function App() {
     );
   }
 
-  // 2. 門禁鎖定登入頁（Taupe 暖灰駝色）
+  // 門禁鎖定頁 (Taupe 灰駝風格)
   if (!isAuthenticated || !currentEmployee) {
     return (
       <div className="min-h-screen bg-[#F6F4F0] flex items-center justify-center p-4 antialiased text-[#2B2521]">
         <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_20px_50px_rgba(43,37,33,0.08)] border border-[#E6E1D8]">
-          {/* 深咖啡駝色頂欄 */}
           <div className="px-5 py-4 bg-[#2B2521] text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl overflow-hidden bg-black border border-[#423932] flex items-center justify-center p-0.5">
@@ -670,7 +738,6 @@ export default function App() {
               <div className="space-y-2.5 max-h-[65vh] overflow-y-auto pr-0.5">
                 <div className="text-xs font-bold text-[#8A7D70] uppercase tracking-wider px-1">請點選出勤姓名</div>
                 
-                {/* 吳昱勳 (管理人) */}
                 {employees.filter((e) => e.role === 'admin' || e.name === '吳昱勳').map((emp) => (
                   <button
                     key={emp.id}
@@ -682,13 +749,12 @@ export default function App() {
                         <span>{emp.name}</span>
                         <span className="text-[10px] px-1.5 py-0.2 bg-[#D4C9BC] text-[#4A3D32] rounded font-semibold">管理人</span>
                       </div>
-                      <div className="text-[11px] text-[#6E5D4F] mt-0.5 font-medium">管理員 · 最高權限管理</div>
+                      <div className="text-[11px] text-[#6E5D4F] mt-0.5 font-medium">薄老闆 · 最高權限管理</div>
                     </div>
                     <Lock className="w-4 h-4 text-[#6E5D4F]" />
                   </button>
                 ))}
 
-                {/* 現場全體員工 */}
                 {employees.filter((e) => e.role !== 'admin' && e.name !== '吳昱勳').map((emp) => (
                   <button
                     key={emp.id}
@@ -715,7 +781,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 4 位數 PIN 碼圓點 */}
                 <div className="flex justify-center items-center gap-3 py-2">
                   {[0, 1, 2, 3].map((idx) => (
                     <div
@@ -733,7 +798,6 @@ export default function App() {
                   <div className="text-xs text-rose-600 text-center font-semibold bg-rose-50 py-1.5 px-3 rounded-xl border border-rose-200">{loginPinError}</div>
                 )}
 
-                {/* 螢幕數字鍵盤 */}
                 <VirtualKeypad
                   onDigit={(d) => {
                     if (loginInputPin.length < 6) {
@@ -776,10 +840,9 @@ export default function App() {
     );
   }
 
-  // 3. 通過驗證後的系統主畫面（Taupe 主色系）
+  // 主畫面
   return (
     <div className="min-h-screen bg-[#F6F4F0] flex flex-col antialiased text-[#2B2521] pb-20 sm:pb-8">
-      {/* 頂端標題導覽列 */}
       <Header
         currentEmployee={currentEmployee}
         employees={employees}
@@ -837,7 +900,7 @@ export default function App() {
           className="flex items-center gap-1.5 px-3 py-1.5 bg-[#EAE3DA] border border-[#D4C9BC] text-[#4A3D32] rounded-xl hover:bg-[#DFD6C9] transition-colors shadow-2xs font-medium"
         >
           <MessageSquareWarning className="w-3.5 h-3.5 text-[#6E5D4F]" />
-          <span>回報問題</span>
+          <span>回報問題給老闆</span>
         </button>
       </div>
 
@@ -888,6 +951,7 @@ export default function App() {
             currentEmployee={currentEmployee}
             todayRecord={currentTodayRecord}
             records={records}
+            bonuses={bonuses}
             onPunchIn={handlePunchIn}
             onPunchOut={handlePunchOut}
             isAdmin={isAdmin}
@@ -899,7 +963,7 @@ export default function App() {
             }}
             onEditRecord={(record) => {
               if (!isAdmin) {
-                alert('⚠️ 權限提醒：僅能查看紀錄，無法修改。需由管理員執行修正。');
+                alert('⚠️ 權限提醒：現場員工僅能查看紀錄，無法修改。需由管理人 (吳昱勳) 執行修正。');
                 return;
               }
               setEditingRecord(record);
@@ -913,12 +977,13 @@ export default function App() {
         {activeTab === 'calendar' && (
           <CalendarView
             records={records}
+            bonuses={bonuses}
             employees={employees}
             currentEmployee={currentEmployee}
             isAdmin={isAdmin}
             onEditRecord={(record) => {
               if (!isAdmin) {
-                alert('⚠️ 權限提醒：員工僅能查看紀錄，需管理員審核修改。');
+                alert('⚠️ 權限提醒：現場員工僅能查看紀錄，需管理人審核修改。');
                 return;
               }
               setEditingRecord(record);
@@ -926,7 +991,7 @@ export default function App() {
             }}
             onAddManualPunch={(dateStr, empId) => {
               if (!isAdmin) {
-                alert('⚠️ 需管理員權限才可進行手動補登。');
+                alert('⚠️ 需管理人權限才可進行手動補登。');
                 return;
               }
               setEditingRecord(null);
@@ -940,11 +1005,12 @@ export default function App() {
         {activeTab === 'sheet' && (
           <CloudSheetView
             records={records}
+            bonuses={bonuses}
             employees={employees}
             isAdmin={isAdmin}
             onEditRecord={(record) => {
               if (!isAdmin) {
-                alert('⚠️ 僅管理員具備編輯表單紀錄權限。');
+                alert('⚠️ 僅管理人具備編輯表單紀錄權限。');
                 return;
               }
               setEditingRecord(record);
@@ -963,7 +1029,7 @@ export default function App() {
                 <div>
                   <h3 className="font-bold text-lg text-[#2B2521]">管理員專區已鎖定</h3>
                   <p className="text-xs text-[#706458] mt-1">
-                    當前身分【{currentEmployee.name}】非管理員，無法直接查看敏感考勤與密碼設定。
+                    當前身分【{currentEmployee.name}】非管理人，無法直接查看敏感考勤與密碼設定。
                   </p>
                 </div>
 
@@ -992,6 +1058,7 @@ export default function App() {
                   isAdmin={isAdmin}
                   employees={employees}
                   records={records}
+                  bonuses={bonuses}
                   onOpenSwitchUser={() => {
                     setSwitchTargetUser(null);
                     setSwitchInputPin('');
@@ -1004,6 +1071,14 @@ export default function App() {
                     setManualEmployeeId(empId);
                     setIsEditModalOpen(true);
                   }}
+                  onOpenAddBonus={() => {
+                    setBonusEmpId('ALL');
+                    setBonusDate(todayStr);
+                    setBonusAmount('');
+                    setBonusNote('');
+                    setIsBonusModalOpen(true);
+                  }}
+                  onDeleteBonus={handleDeleteBonus}
                   onAddEmployee={handleAddEmployee}
                   onUpdateEmployee={handleUpdateEmployee}
                   onDeleteEmployee={handleDeleteEmployee}
@@ -1141,6 +1216,115 @@ export default function App() {
         </div>
       </nav>
 
+      {/* 薪資加給新增彈窗 (Taupe 暖駝色) */}
+      {isBonusModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2521]/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-[#E6E1D8]">
+            <div className="px-5 py-4 bg-[#2B2521] text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Coins className="w-5 h-5 text-[#D4C9BC]" />
+                <div>
+                  <h3 className="font-bold text-base text-white">薪資加給登記</h3>
+                  <p className="text-[11px] text-[#C4B8AB]">僅管理員可登記 · 自動累計至員工當月預估薪資</p>
+                </div>
+              </div>
+              <button onClick={() => setIsBonusModalOpen(false)} className="text-[#C4B8AB] hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBonusSubmit} className="p-5 space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-[#54473C] mb-1">發放對象</label>
+                <select
+                  value={bonusEmpId}
+                  onChange={(e) => setBonusEmpId(e.target.value)}
+                  className="w-full text-xs sm:text-sm border border-[#E6E1D8] rounded-xl px-3 py-2 bg-[#FAF8F5] focus:outline-none focus:ring-2 focus:ring-[#6E5D4F] font-bold text-[#2B2521]"
+                >
+                  <option value="ALL">🌟 全體員工共同加給 (全員同時發放)</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.role === 'admin' ? '管理人' : emp.workType})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#54473C] mb-1">加給生效日期</label>
+                  <input
+                    type="date"
+                    required
+                    value={bonusDate}
+                    onChange={(e) => setBonusDate(e.target.value)}
+                    className="w-full text-xs border border-[#E6E1D8] rounded-xl px-3 py-2 bg-[#FAF8F5] focus:outline-none focus:ring-2 focus:ring-[#6E5D4F] text-[#2B2521]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#54473C] mb-1">加給金額 (NT$)</label>
+                  <input
+                    type="number"
+                    required
+                    step="50"
+                    placeholder="例如: 1000"
+                    value={bonusAmount}
+                    onChange={(e) => setBonusAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full text-xs border border-[#E6E1D8] rounded-xl px-3 py-2 font-mono font-bold text-[#2B2521] focus:outline-none focus:ring-2 focus:ring-[#6E5D4F]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-[#54473C]">加給項目說明 / 事由</label>
+                  <span className="text-[10px] text-[#998D80]">點擊快速代入：</span>
+                </div>
+                {/* 快速常用標籤 */}
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {['遠程油資貼補', '現場誤餐津貼', '特定案場趕工獎金', '重物搬運補貼', '全勤獎勵'].map((tag) => (
+                    <button
+                      type="button"
+                      key={tag}
+                      onClick={() => setBonusNote(tag)}
+                      className="px-2 py-0.5 text-[10px] rounded-lg bg-[#FAF8F5] border border-[#E6E1D8] text-[#54473C] hover:bg-[#EAE3DA] hover:border-[#D4C9BC] transition-colors"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="請填寫加給事由..."
+                  value={bonusNote}
+                  onChange={(e) => setBonusNote(e.target.value)}
+                  className="w-full text-xs border border-[#E6E1D8] rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6E5D4F] text-[#2B2521]"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBonusModalOpen(false)}
+                  className="flex-1 py-2 text-xs font-semibold text-[#706458] border border-[#E6E1D8] rounded-xl hover:bg-[#FAF8F5]"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingBonus}
+                  className="flex-1 py-2 text-xs font-bold text-white bg-[#6E5D4F] hover:bg-[#5C4D40] rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+                >
+                  <Check className="w-4 h-4 text-[#D4C9BC]" />
+                  <span>{isSavingBonus ? '同步存入雲端...' : '確認加給發放'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* 系統內切換人員彈窗 */}
       {isUserSwitchOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2521]/60 backdrop-blur-xs">
@@ -1200,7 +1384,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* 密碼顯示圓點區 */}
                   <div className="flex justify-center items-center gap-3 py-2">
                     {[0, 1, 2, 3].map((idx) => (
                       <div
@@ -1433,7 +1616,7 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <MessageSquareWarning className="w-5 h-5 text-[#D4C9BC]" />
                 <div>
-                  <h3 className="font-bold text-base">回報問題</h3>
+                  <h3 className="font-bold text-base">回報問題給老闆</h3>
                   <p className="text-[11px] text-[#C4B8AB]">訊息將即時寄達 pcci.made2026@gmail.com</p>
                 </div>
               </div>
