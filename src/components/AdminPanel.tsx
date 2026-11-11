@@ -70,7 +70,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   if (!isAdmin) {
     return (
       <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm text-center max-w-lg mx-auto space-y-4 my-8">
-        <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-700 mx-auto flex items-center justify-center">
+        <div className="w-16 h-16 rounded-full bg-taupe-100 text-taupe-700 mx-auto flex items-center justify-center">
           <Lock className="w-8 h-8" />
         </div>
         <h3 className="text-xl font-bold text-slate-900">
@@ -81,7 +81,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </p>
         <button
           onClick={onOpenSwitchUser}
-          className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-sm shadow-sm transition-all inline-flex items-center gap-2"
+          className="px-6 py-3 bg-taupe-600 hover:bg-taupe-700 text-white font-bold rounded-xl text-sm shadow-sm transition-all inline-flex items-center gap-2"
         >
           <Shield className="w-4 h-4" />
           <span>輸入管理員密碼解鎖</span>
@@ -168,18 +168,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   return (
     <div className="space-y-6">
       {/* Admin Header Banner */}
-      <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-taupe-600 to-taupe-600 text-white rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Shield className="w-5 h-5 text-amber-200" />
+          <Shield className="w-5 h-5 text-taupe-200" />
           <h2 className="text-base sm:text-lg font-bold">管理人後台</h2>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => onAddManualPunch(todayStr)}
-            className="px-3.5 py-2 rounded-xl bg-white text-amber-900 font-bold text-xs hover:bg-amber-50 transition-colors flex items-center gap-1.5 shadow-xs"
+            className="px-3.5 py-2 rounded-xl bg-white text-taupe-900 font-bold text-xs hover:bg-taupe-50 transition-colors flex items-center gap-1.5 shadow-xs"
           >
-            <PlusCircle className="w-4 h-4 text-amber-700" />
+            <PlusCircle className="w-4 h-4 text-taupe-700" />
             <span>補登打卡紀錄</span>
           </button>
         </div>
@@ -232,7 +232,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     key={emp.id}
                     className={`p-4 rounded-2xl border transition-all ${
                       isWorking
-                        ? 'border-amber-300 bg-amber-50/40 shadow-xs'
+                        ? 'border-taupe-300 bg-taupe-50/40 shadow-xs'
                         : isFinished
                         ? 'border-emerald-200 bg-white shadow-xs'
                         : 'border-slate-200 bg-slate-50/60 opacity-80'
@@ -247,8 +247,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </div>
 
                       {isWorking ? (
-                        <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                        <span className="text-[11px] font-bold text-taupe-700 bg-taupe-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-taupe-500 animate-ping" />
                           現場施工中
                         </span>
                       ) : isFinished ? (
@@ -359,7 +359,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         {emp.name}
                       </span>
                       {emp.role === 'admin' && (
-                        <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+                        <span className="text-[11px] font-bold text-taupe-700 bg-taupe-100 px-2 py-0.5 rounded">
                           管理人
                         </span>
                       )}
