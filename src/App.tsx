@@ -27,18 +27,15 @@ export default function App() {
   const [manualDate, setManualDate] = useState<string | undefined>();
   const [manualEmployeeId, setManualEmployeeId] = useState<string | undefined>();
 
-  // 封裝安全送出資料給 Google 試算表的函式
+  // 安全傳送資料至 Google 試算表
   const sendToGoogleSheet = async (payload: any) => {
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // 關鍵：避免被瀏覽器 CORS 攔截，確保資料送達 Google
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload),
       });
-      // 稍微等待 Google 試算表寫入儲存格後再重新抓取最新資料
       setTimeout(() => {
         fetchState();
       }, 1500);
@@ -47,7 +44,7 @@ export default function App() {
     }
   };
 
-  // 從 Google 試算表取得最新資料
+  // 從 Google 試算表取得最新資料並進行格式校正
   const fetchState = async () => {
     try {
       const res = await fetch(GOOGLE_SCRIPT_URL);
@@ -55,13 +52,27 @@ export default function App() {
       if (json.success && json.data) {
         const data: CompanyState = json.data;
         if (data.employees && data.employees.length > 0) {
-          setEmployees(data.employees);
+          const sanitizedEmployees = data.employees.map((emp) => {
+            const isBoss = emp.role === 'admin' || emp.name === '吳昱勳';
+            return {
+              ...emp,
+              role: isBoss ? ('admin' as const) : ('worker' as const),
+              active: true,
+            };
+          });
+
+          setEmployees(sanitizedEmployees);
+
           if (!currentEmployee) {
-            const firstWorker = data.employees.find((e) => e.role === 'worker') || data.employees[0];
-            setCurrentEmployee(firstWorker);
-            setIsAdmin(firstWorker.role === 'admin');
+            const defaultUser = sanitizedEmployees[0];
+            setCurrentEmployee(defaultUser);
+            setIsAdmin(defaultUser.role === 'admin');
+          } else {
+            const updated = sanitizedEmployees.find((e) => e.id === currentEmployee.id);
+            if (updated) setCurrentEmployee(updated);
           }
         }
+
         if (data.records) {
           setRecords(data.records);
         }
@@ -90,7 +101,6 @@ export default function App() {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    // 網頁立即顯示打卡成功畫面
     const tempRecord: PunchRecord = {
       id: `rec-${todayStr}-${currentEmployee.id}`,
       employeeId: currentEmployee.id,
@@ -107,7 +117,6 @@ export default function App() {
     };
     setRecords((prev) => [tempRecord, ...prev.filter((r) => r.id !== tempRecord.id)]);
 
-    // 同步寫入 Google 試算表
     await sendToGoogleSheet({
       action: 'punchIn',
       employeeId: currentEmployee.id,
@@ -148,9 +157,38 @@ export default function App() {
     });
   };
 
-  // 3. 管理員儲存/補登紀錄
+  // 3. 管理員儲存/補登紀錄（即時更新畫面）
   const handleSaveRecord = async (data: Partial<PunchRecord>) => {
-    await sendToGoogleSheet({ action: 'saveRecord', record: data });
+    const recordId = data.id || `rec-${data.date || todayStr}-${data.employeeId}-${Date.now()}`;
+    const newRecord: PunchRecord = {
+      id: recordId,
+      employeeId: data.employeeId || '',
+      employeeName: data.employeeName || '員工',
+      date: data.date || todayStr,
+      clockInTime: data.clockInTime || '08:00:00',
+      clockOutTime: data.clockOutTime || '17:30:00',
+      siteName: data.siteName || '',
+      wageMultiplier: data.wageMultiplier !== undefined ? data.wageMultiplier : 1.0,
+      calculatedWage: data.calculatedWage || 0,
+      durationHours: data.durationHours || 8.5,
+      notes: data.notes || '',
+      adminNote: data.adminNote || '管理員手動補登',
+      modifiedByAdmin: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...data,
+    } as PunchRecord;
+
+    // 關鍵修復：立刻在畫面上更新，不需等待 Google 試算表回傳
+    setRecords((prev) => {
+      const exists = prev.some((r) => r.id === recordId);
+      if (exists) {
+        return prev.map((r) => (r.id === recordId ? { ...r, ...newRecord } : r));
+      }
+      return [newRecord, ...prev];
+    });
+
+    await sendToGoogleSheet({ action: 'saveRecord', record: newRecord });
   };
 
   // 4. 管理員刪除紀錄
@@ -180,7 +218,7 @@ export default function App() {
 
   const handleOpenEditRecord = (record: PunchRecord) => {
     if (!isAdmin) {
-      alert('⚠️ 權限提醒：現場員工僅能查看紀錄，無法修改。需由管理人 (薄老闆) 執行修正。');
+      alert('⚠️ 權限提醒：現場員工僅能查看紀錄，無法修改。需由管理人 (吳昱勳) 執行修正。');
       return;
     }
     setEditingRecord(record);
