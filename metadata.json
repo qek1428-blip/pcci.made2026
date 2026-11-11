@@ -1,0 +1,6 @@
+{
+  "name": "薄薄工程行打卡機",
+  "description": "薄薄工程行專屬員工每月上下班打卡系統，支援日薪制考勤、打卡日曆、雲端記錄與管理員審核報表導出。",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
