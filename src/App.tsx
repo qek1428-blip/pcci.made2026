@@ -83,15 +83,17 @@ export default function App() {
     }
   };
 
-  // 從 Google 試算表取得最新資料
+  // 從 Google 試算表取得最新資料並進行自動校正
   const fetchState = async () => {
     try {
       const res = await fetch(GOOGLE_SCRIPT_URL);
       const json = await res.json();
       if (json.success && json.data) {
         const data: CompanyState = json.data;
+        let loadedEmployees: Employee[] = [];
+
         if (data.employees && data.employees.length > 0) {
-          const sanitizedEmployees = data.employees.map((emp) => {
+          loadedEmployees = data.employees.map((emp) => {
             const isBoss = emp.role === 'admin' || emp.name === '吳昱勳';
             return {
               ...emp,
@@ -100,28 +102,49 @@ export default function App() {
             };
           });
 
-          setEmployees(sanitizedEmployees);
+          setEmployees(loadedEmployees);
 
           if (!currentEmployee) {
-            const defaultUser = sanitizedEmployees[0];
+            const defaultUser = loadedEmployees[0];
             setCurrentEmployee(defaultUser);
             setIsAdmin(defaultUser.role === 'admin');
           } else {
-            const updated = sanitizedEmployees.find((e) => e.id === currentEmployee.id);
+            const updated = loadedEmployees.find((e) => e.id === currentEmployee.id);
             if (updated) setCurrentEmployee(updated);
           }
         }
 
         if (data.records) {
-          const sanitizedRecords: PunchRecord[] = data.records.map((r: any) => ({
-            ...r,
-            date: formatRecordDate(r.date),
-            clockInTime: formatRecordTime(r.clockInTime),
-            clockOutTime: r.clockOutTime ? formatRecordTime(r.clockOutTime) : '',
-            durationHours: Number(r.durationHours) || 0,
-            wageMultiplier: Number(r.wageMultiplier) || 1.0,
-            calculatedWage: Number(r.calculatedWage) || 0,
-          }));
+          const sanitizedRecords: PunchRecord[] = data.records.map((r: any) => {
+            const dateStr = formatRecordDate(r.date);
+            const inTimeStr = formatRecordTime(r.clockInTime);
+            const outTimeStr = r.clockOutTime ? formatRecordTime(r.clockOutTime) : '';
+
+            let durationHours = Number(r.durationHours) || 0;
+            let wageMultiplier = Number(r.wageMultiplier) || 1.0;
+            let calculatedWage = Number(r.calculatedWage) || 0;
+
+            // 自動校驗修復：若已有上下班時間，依最新規則重新核算工時與工數（自動修復舊 8.5 錯誤紀錄）
+            if (inTimeStr && outTimeStr) {
+              const emp = loadedEmployees.find((e) => String(e.id) === String(r.employeeId));
+              const baseRate = emp ? emp.dailyRate : (calculatedWage > 0 ? calculatedWage : 3000);
+              const stats = calculateWorkStats(inTimeStr, outTimeStr, baseRate);
+              durationHours = stats.durationHours;
+              wageMultiplier = stats.wageMultiplier;
+              calculatedWage = stats.calculatedWage;
+            }
+
+            return {
+              ...r,
+              date: dateStr,
+              clockInTime: inTimeStr,
+              clockOutTime: outTimeStr,
+              durationHours,
+              wageMultiplier,
+              calculatedWage,
+            };
+          });
+
           setRecords(sanitizedRecords);
         }
 
@@ -140,6 +163,7 @@ export default function App() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
+  // 取得當前使用者今天的打卡紀錄
   const currentTodayRecord = records.find(
     (r) => r.employeeId === currentEmployee?.id && r.date === todayStr
   );
@@ -150,15 +174,15 @@ export default function App() {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    const tempRecord: PunchRecord = {
+    const newRecord: PunchRecord = {
       id: `rec-${todayStr}-${currentEmployee.id}`,
       employeeId: currentEmployee.id,
       employeeName: currentEmployee.name,
       date: todayStr,
       clockInTime: timeStr,
-      clockOutTime: '',
-      siteName,
-      notes,
+      clockOutTime: '', // 上班打卡時下班時間為空
+      siteName: siteName || '',
+      notes: notes || '',
       source: 'mobile_web',
       durationHours: 0,
       wageMultiplier: 1.0,
@@ -166,20 +190,16 @@ export default function App() {
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
-    setRecords((prev) => [tempRecord, ...prev.filter((r) => r.id !== tempRecord.id)]);
+
+    setRecords((prev) => [newRecord, ...prev.filter((r) => r.id !== newRecord.id)]);
 
     await sendToGoogleSheet({
-      action: 'punchIn',
-      employeeId: currentEmployee.id,
-      date: todayStr,
-      time: timeStr,
-      siteName,
-      notes,
-      locationStr,
+      action: 'saveRecord',
+      record: newRecord,
     });
   };
 
-  // 2. 下班打卡（動態計算工時與工數，不再寫死 8.5 小時）
+  // 2. 下班打卡（改用 saveRecord 送出精確工時與折半工資）
   const handlePunchOut = async (notes?: string) => {
     if (!currentEmployee) return;
     const now = new Date();
@@ -188,31 +208,34 @@ export default function App() {
     const todayRec = records.find((r) => r.employeeId === currentEmployee.id && r.date === todayStr);
     const inTime = todayRec?.clockInTime || timeStr;
 
-    // 計算精準工時與工數
+    // 精準計算工時與折半工數
     const stats = calculateWorkStats(inTime, timeStr, currentEmployee.dailyRate);
 
+    const updatedRecord: PunchRecord = {
+      ...(todayRec || {
+        id: `rec-${todayStr}-${currentEmployee.id}`,
+        employeeId: currentEmployee.id,
+        employeeName: currentEmployee.name,
+        date: todayStr,
+        clockInTime: inTime,
+        siteName: '',
+      }),
+      clockOutTime: timeStr,
+      durationHours: stats.durationHours,
+      wageMultiplier: stats.wageMultiplier,
+      calculatedWage: stats.calculatedWage,
+      notes: notes ? (todayRec?.notes ? `${todayRec.notes} | ${notes}` : notes) : (todayRec?.notes || ''),
+      updatedAt: now.toISOString(),
+    };
+
     setRecords((prev) =>
-      prev.map((r) => {
-        if (r.employeeId === currentEmployee.id && r.date === todayStr) {
-          return {
-            ...r,
-            clockOutTime: timeStr,
-            durationHours: stats.durationHours,
-            wageMultiplier: stats.wageMultiplier,
-            calculatedWage: stats.calculatedWage,
-            updatedAt: now.toISOString(),
-          };
-        }
-        return r;
-      })
+      prev.map((r) => (r.employeeId === currentEmployee.id && r.date === todayStr ? updatedRecord : r))
     );
 
+    // 透過 saveRecord 完整寫入 Google 試算表，跳過舊版後端寫死 8.5 的漏洞
     await sendToGoogleSheet({
-      action: 'punchOut',
-      employeeId: currentEmployee.id,
-      date: todayStr,
-      time: timeStr,
-      notes,
+      action: 'saveRecord',
+      record: updatedRecord,
     });
   };
 
