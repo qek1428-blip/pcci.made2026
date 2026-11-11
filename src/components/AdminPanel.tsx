@@ -234,7 +234,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       isWorking
                         ? 'border-taupe-300 bg-taupe-50/40 shadow-xs'
                         : isFinished
-                        ? 'border-emerald-200 bg-white shadow-xs'
+                        ? 'border-lime-１00 bg-white shadow-xs'
                         : 'border-slate-200 bg-slate-50/60 opacity-80'
                     }`}
                   >
@@ -252,7 +252,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           現場施工中
                         </span>
                       ) : isFinished ? (
-                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="text-[11px] font-bold text-emerald-700 bg-lime-100 px-2 py-0.5 rounded-full flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           已完成下班
                         </span>
