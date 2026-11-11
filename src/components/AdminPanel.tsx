@@ -234,7 +234,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       isWorking
                         ? 'border-taupe-300 bg-taupe-50/40 shadow-xs'
                         : isFinished
-                        ? 'border-lime-１00 bg-white shadow-xs'
+                        ? 'border-taupe-１00 bg-white shadow-xs'
                         : 'border-slate-200 bg-slate-50/60 opacity-80'
                     }`}
                   >
@@ -252,7 +252,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           現場施工中
                         </span>
                       ) : isFinished ? (
-                        <span className="text-[11px] font-bold text-emerald-700 bg-lime-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span className="text-[11px] font-bold text-taupe-700 bg-taupe-100 px-2 py-0.5 rounded-full flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           已完成下班
                         </span>
@@ -367,7 +367,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                     {/* Right: Daily Rate & Chevron (No thumbnails) */}
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-emerald-700 text-sm sm:text-base tabular-nums">
+                      <span className="font-mono font-bold text-taupe-700 text-sm sm:text-base tabular-nums">
                         NT$ {emp.dailyRate.toLocaleString()}
                         <span className="text-xs text-slate-500 font-normal"> / 天</span>
                       </span>
@@ -408,7 +408,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                         <div className="bg-white p-2.5 rounded-lg border border-slate-100">
                           <span className="text-slate-400 block mb-0.5">日薪核算標準</span>
-                          <span className="font-mono font-bold text-emerald-700">
+                          <span className="font-mono font-bold text-taupe-700">
                             NT$ {emp.dailyRate.toLocaleString()}
                           </span>
                         </div>
@@ -518,7 +518,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     required
                     value={editRate}
                     onChange={(e) => setEditRate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500 font-mono font-bold text-emerald-700"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500 font-mono font-bold text-taupe-700"
                   />
                 </div>
               </div>
@@ -634,7 +634,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     required
                     value={newEmpRate}
                     onChange={(e) => setNewEmpRate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500 font-mono font-bold text-emerald-700"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500 font-mono font-bold text-taupe-700"
                   />
                 </div>
               </div>
