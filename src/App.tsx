@@ -996,4 +996,357 @@ export default function App() {
                     >
                       <div>
                         <div className="font-bold text-slate-200 text-sm">{emp.name}</div>
-                        <div className="text
+                        <div className="text-xs text-slate-400">{emp.workType} · NT${emp.dailyRate}/天</div>
+                      </div>
+                      <Lock className="w-4 h-4 text-slate-500" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="text-center py-1">
+                    <div className="text-xs text-slate-400">正在切換至</div>
+                    <div className="text-lg font-bold text-white">{selectedTargetUser.name}</div>
+                    <div className="text-xs text-orange-400 mt-0.5">
+                      {selectedTargetUser.role === 'admin' || selectedTargetUser.name === '吳昱勳'
+                        ? '管理員 PIN 碼 (預設: 8888)'
+                        : '員工打卡 PIN 碼 (預設: 0000)'}
+                    </div>
+                  </div>
+
+                  {/* 密碼顯示圓點區 */}
+                  <div className="flex justify-center items-center gap-3 py-2">
+                    {[0, 1, 2, 3].map((idx) => (
+                      <div
+                        key={idx}
+                        className={`w-4 h-4 rounded-full border-2 transition-all ${
+                          inputPin.length > idx
+                            ? 'bg-orange-500 border-orange-400 scale-110 shadow-[0_0_8px_rgba(249,115,22,0.8)]'
+                            : 'bg-slate-800 border-slate-700'
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  {pinError && <div className="text-xs text-rose-400 text-center font-semibold">{pinError}</div>}
+
+                  {/* 虛擬數字鍵盤 */}
+                  <VirtualKeypad
+                    onDigit={(d) => {
+                      if (inputPin.length < 6) {
+                        setInputPin((prev) => prev + d);
+                        setPinError('');
+                      }
+                    }}
+                    onDelete={() => {
+                      setInputPin((prev) => prev.slice(0, -1));
+                      setPinError('');
+                    }}
+                    onClear={() => {
+                      setInputPin('');
+                      setPinError('');
+                    }}
+                  />
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTargetUser(null)}
+                      className="flex-1 py-2.5 text-xs font-semibold text-slate-300 border border-slate-700 bg-slate-800 hover:bg-slate-700 rounded-xl"
+                    >
+                      重新選擇
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmSwitchWithPin}
+                      className="flex-1 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 rounded-xl flex items-center justify-center gap-1 shadow-md"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>確認切換</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. 管理員修改成員 PIN 碼彈窗 */}
+      {adminEditTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-800">
+            <div className="px-5 py-4 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-orange-400" />
+                <h3 className="font-bold text-base">修改 PIN 碼：{adminEditTarget.name}</h3>
+              </div>
+              <button onClick={() => setAdminEditTarget(null)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-slate-400 text-center">請直接按下方數字鍵輸入 4 位數新 PIN 碼：</p>
+
+              {/* 圓點顯示 */}
+              <div className="flex justify-center items-center gap-3 py-2">
+                {[0, 1, 2, 3].map((idx) => (
+                  <div
+                    key={idx}
+                    className={`w-4 h-4 rounded-full border-2 transition-all ${
+                      adminTargetNewPin.length > idx
+                        ? 'bg-orange-500 border-orange-400 scale-110 shadow-[0_0_8px_rgba(249,115,22,0.8)]'
+                        : 'bg-slate-800 border-slate-700'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {adminPinSuccess && (
+                <div className="text-xs text-emerald-400 text-center font-bold">
+                  ✅ 已成功更新 {adminEditTarget.name} 的 PIN 碼！
+                </div>
+              )}
+
+              <VirtualKeypad
+                onDigit={(d) => {
+                  if (adminTargetNewPin.length < 6) setAdminTargetNewPin((prev) => prev + d);
+                }}
+                onDelete={() => setAdminTargetNewPin((prev) => prev.slice(0, -1))}
+                onClear={() => setAdminTargetNewPin('')}
+              />
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAdminEditTarget(null)}
+                  className="flex-1 py-2.5 text-xs font-semibold text-slate-300 border border-slate-700 bg-slate-800 hover:bg-slate-700 rounded-xl"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAdminChangeTargetPinConfirm}
+                  className="flex-1 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 rounded-xl flex items-center justify-center gap-1 shadow-md"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>確認儲存</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. 個人修改 PIN 碼彈窗 */}
+      {isChangePinOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-800">
+            <div className="px-5 py-4 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-orange-400" />
+                <h3 className="font-bold text-base">修改個人 PIN 碼</h3>
+              </div>
+              <button onClick={() => setIsChangePinOpen(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleChangePinSubmit} className="p-5 space-y-3">
+              <div className="text-xs text-slate-300 bg-slate-950 border border-slate-800 p-2.5 rounded-xl">
+                當前人員：<span className="font-bold text-white">{currentEmployee.name}</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                <button
+                  type="button"
+                  onClick={() => setActivePinField('old')}
+                  className={`p-2 rounded-xl border text-[11px] font-bold transition-all ${
+                    activePinField === 'old'
+                      ? 'border-orange-500 bg-orange-500/20 text-orange-400 ring-2 ring-orange-500/30'
+                      : 'border-slate-800 bg-slate-950/60 text-slate-400'
+                  }`}
+                >
+                  <div>舊密碼</div>
+                  <div className="font-mono text-xs">{oldPin ? '••••' : '(輸入)'}</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePinField('new')}
+                  className={`p-2 rounded-xl border text-[11px] font-bold transition-all ${
+                    activePinField === 'new'
+                      ? 'border-orange-500 bg-orange-500/20 text-orange-400 ring-2 ring-orange-500/30'
+                      : 'border-slate-800 bg-slate-950/60 text-slate-400'
+                  }`}
+                >
+                  <div>新密碼</div>
+                  <div className="font-mono text-xs">{newPin ? '••••' : '(輸入)'}</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePinField('confirm')}
+                  className={`p-2 rounded-xl border text-[11px] font-bold transition-all ${
+                    activePinField === 'confirm'
+                      ? 'border-orange-500 bg-orange-500/20 text-orange-400 ring-2 ring-orange-500/30'
+                      : 'border-slate-800 bg-slate-950/60 text-slate-400'
+                  }`}
+                >
+                  <div>再次確認</div>
+                  <div className="font-mono text-xs">{confirmNewPin ? '••••' : '(輸入)'}</div>
+                </button>
+              </div>
+
+              {changePinError && <div className="text-xs text-rose-400 font-semibold text-center">{changePinError}</div>}
+              {changePinSuccess && <div className="text-xs text-emerald-400 font-semibold text-center">✅ 密碼修改成功！已儲存至雲端。</div>}
+
+              <VirtualKeypad
+                onDigit={(d) => {
+                  setChangePinError('');
+                  if (activePinField === 'old' && oldPin.length < 6) setOldPin((p) => p + d);
+                  if (activePinField === 'new' && newPin.length < 6) setNewPin((p) => p + d);
+                  if (activePinField === 'confirm' && confirmNewPin.length < 6) setConfirmNewPin((p) => p + d);
+                }}
+                onDelete={() => {
+                  setChangePinError('');
+                  if (activePinField === 'old') setOldPin((p) => p.slice(0, -1));
+                  if (activePinField === 'new') setNewPin((p) => p.slice(0, -1));
+                  if (activePinField === 'confirm') setConfirmNewPin((p) => p.slice(0, -1));
+                }}
+                onClear={() => {
+                  setChangePinError('');
+                  if (activePinField === 'old') setOldPin('');
+                  if (activePinField === 'new') setNewPin('');
+                  if (activePinField === 'confirm') setConfirmNewPin('');
+                }}
+              />
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsChangePinOpen(false)}
+                  className="flex-1 py-2 text-xs font-semibold text-slate-300 border border-slate-700 bg-slate-800 hover:bg-slate-700 rounded-xl"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 rounded-xl shadow-md"
+                >
+                  確認修改
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. 問題回報彈窗 */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-800">
+            <div className="px-5 py-4 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <MessageSquareWarning className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="font-bold text-base">回報問題給老闆</h3>
+                  <p className="text-[11px] text-slate-400">訊息將即時寄達 pcci.made2026@gmail.com</p>
+                </div>
+              </div>
+              <button onClick={() => setIsReportModalOpen(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendReport} className="p-5 space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">回報人員</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={currentEmployee.name}
+                    className="w-full text-xs border border-slate-800 rounded-xl px-3 py-2 bg-slate-950 font-bold text-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">聯絡電話</label>
+                  <input
+                    type="tel"
+                    placeholder="請輸入手機電話"
+                    value={reportPhone}
+                    onChange={(e) => setReportPhone(e.target.value)}
+                    className="w-full text-xs border border-slate-700 rounded-xl px-3 py-2 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">問題類別</label>
+                <select
+                  value={reportCategory}
+                  onChange={(e) => setReportCategory(e.target.value)}
+                  className="w-full text-xs border border-slate-700 rounded-xl px-3 py-2 bg-slate-950 text-white focus:outline-none focus:border-orange-500 font-medium"
+                >
+                  <option value="打卡時間有誤/忘記打卡">打卡時間有誤 / 忘記打卡申請補登</option>
+                  <option value="請假與現場排班異動">請假 / 案場排班異動通知</option>
+                  <option value="工時與日薪計算疑問">工時與日薪計算疑問</option>
+                  <option value="手機GPS定位/設備問題">手機定位或打卡系統異常</option>
+                  <option value="其他施工現場建議事項">其他施工現場建議事項</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">問題詳細說明</label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="請詳細描述遇到的狀況（例如：忘記打下班卡、今天在民權路工地提早收工等）..."
+                  value={reportDesc}
+                  onChange={(e) => setReportDesc(e.target.value)}
+                  className="w-full text-xs border border-slate-700 rounded-xl p-3 bg-slate-950 text-white placeholder-slate-500 focus:outline-none focus:border-orange-500"
+                />
+              </div>
+
+              {reportSuccess && (
+                <div className="p-3 bg-emerald-950/50 border border-emerald-500/40 rounded-xl text-xs text-emerald-300 font-semibold text-center">
+                  ✅ 已成功寄出通知至負責人信箱！薄老闆將會收到郵件通知。
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsReportModalOpen(false)}
+                  className="flex-1 py-2.5 text-xs font-semibold text-slate-300 border border-slate-700 bg-slate-800 hover:bg-slate-700 rounded-xl"
+                >
+                  關閉
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingReport}
+                  className="flex-1 py-2.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 rounded-xl shadow-md flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSendingReport ? '正在寄送信件...' : '送出問題回報'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. 補登編輯彈窗 */}
+      <EditRecordModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        record={editingRecord}
+        employees={employees}
+        onSaveRecord={handleSaveRecord}
+        onDeleteRecord={handleDeleteRecord}
+        initialDate={manualDate}
+        initialEmployeeId={manualEmployeeId}
+      />
+    </div>
+  );
+}
