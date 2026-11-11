@@ -14,26 +14,28 @@ interface EditRecordModalProps {
   initialEmployeeId?: string;
 }
 
-// 工時與工數計算函式：未滿4小時算0.5工，9小時扣1小時休息為1工
+// 工時與工數精確計算：少於4小時算0.5工(折半)，滿5小時扣1小時休息為1工
 export const calculateWorkStats = (inTime: string, outTime: string, dailyRate: number) => {
-  if (!inTime || !outTime) {
+  if (!inTime || !outTime.trim()) {
     return { durationHours: 0, wageMultiplier: 1.0, calculatedWage: dailyRate };
   }
-  const [inH, inM = 0] = inTime.split(':').map(Number);
-  const [outH, outM = 0] = outTime.split(':').map(Number);
-  let diffMinutes = (outH * 60 + outM) - (inH * 60 + inM);
-  if (diffMinutes < 0) diffMinutes += 24 * 60; // 跨午夜防呆
+  const [inH = 0, inM = 0, inS = 0] = inTime.split(':').map(Number);
+  const [outH = 0, outM = 0, outS = 0] = outTime.split(':').map(Number);
+  let diffSeconds = (outH * 3600 + outM * 60 + outS) - (inH * 3600 + inM * 60 + inS);
+  if (diffSeconds < 0) diffSeconds += 24 * 3600; // 跨天防呆
 
-  const rawHours = diffMinutes / 60;
-  // 滿 5 小時扣除 1 小時休息時間（9小時在場 -> 8小時工時）
+  const rawHours = diffSeconds / 3600;
+
+  // 滿 5 小時以上扣除 1 小時休息時間（9小時在場 -> 8小時實計）
   let netHours = rawHours >= 5 ? Math.max(4, rawHours - 1) : rawHours;
-  netHours = Math.round(netHours * 10) / 10;
+  let durationHours = Math.round(netHours * 10) / 10;
+  if (rawHours > 0 && durationHours === 0) durationHours = 0.1; // 極短時間打卡至少計 0.1 小時
 
-  // 未滿 4 小時算 0.5 工，滿 4 小時算 1.0 工（暫時移除加班倍率）
+  // 未滿 4 小時算 0.5 工，滿 4 小時算 1.0 工
   const wageMultiplier = rawHours < 4 ? 0.5 : 1.0;
   const calculatedWage = Math.round(dailyRate * wageMultiplier);
 
-  return { durationHours: netHours, wageMultiplier, calculatedWage };
+  return { durationHours, wageMultiplier, calculatedWage };
 };
 
 export const EditRecordModal: React.FC<EditRecordModalProps> = ({
@@ -48,40 +50,27 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
 }) => {
   const isCreating = !record;
 
-  const [employeeId, setEmployeeId] = useState(
-    record?.employeeId || initialEmployeeId || employees[0]?.id || ''
-  );
-  const [date, setDate] = useState(
-    record?.date || initialDate || new Date().toISOString().split('T')[0]
-  );
-  const [clockInTime, setClockInTime] = useState(
-    record?.clockInTime || '08:00:00'
-  );
-  // 預設下班時間改為 17:00:00，若是建立模式且需留空可自由清空
-  const [clockOutTime, setClockOutTime] = useState(
-    record?.clockOutTime !== undefined ? record.clockOutTime : (isCreating ? '17:00:00' : '')
-  );
-  // 施工案場全面留空
-  const [siteName, setSiteName] = useState(record?.siteName || '');
-  const [wageMultiplier, setWageMultiplier] = useState<number>(
-    record?.wageMultiplier !== undefined ? record.wageMultiplier : 1.0
-  );
-  const [calculatedWage, setCalculatedWage] = useState<number>(
-    record?.calculatedWage || 3000
-  );
-  const [notes, setNotes] = useState(record?.notes || '');
-  const [adminNote, setAdminNote] = useState(
-    record?.adminNote || (isCreating ? '管理員手動補登' : '管理員修正打卡時間')
-  );
+  const [employeeId, setEmployeeId] = useState('');
+  const [date, setDate] = useState('');
+  const [clockInTime, setClockInTime] = useState('08:00:00');
+  const [clockOutTime, setClockOutTime] = useState('');
+  const [siteName, setSiteName] = useState('');
+  const [wageMultiplier, setWageMultiplier] = useState<number>(1.0);
+  const [calculatedWage, setCalculatedWage] = useState<number>(3000);
+  const [notes, setNotes] = useState('');
+  const [adminNote, setAdminNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 表單初始化同步
+  // 僅在彈窗開啟時初始化一次，避免背景同步更新時覆蓋使用者正在編輯的內容
   useEffect(() => {
+    if (!isOpen) return;
+
     if (record) {
       setEmployeeId(record.employeeId);
       setDate(record.date);
       setClockInTime(record.clockInTime);
-      setClockOutTime(record.clockOutTime || '');
+      // 若原先尚未下班，保持為空字串，絕不自動帶入 17:00:00
+      setClockOutTime(record.clockOutTime ? record.clockOutTime : '');
       setSiteName(record.siteName || '');
       setWageMultiplier(record.wageMultiplier !== undefined ? record.wageMultiplier : 1.0);
       setCalculatedWage(record.calculatedWage || 3000);
@@ -92,30 +81,29 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
       setEmployeeId(defaultEmpId);
       setDate(initialDate || new Date().toISOString().split('T')[0]);
       setClockInTime('08:00:00');
-      setClockOutTime('17:00:00');
-      setSiteName(''); // 施工案場留空
+      setClockOutTime(''); // 新增補登預設也留空，由使用者自由決定是否補下班卡
+      setSiteName(''); // 施工案場預設留空
       setWageMultiplier(1.0);
       const defaultEmp = employees.find((e) => e.id === defaultEmpId);
       setCalculatedWage(defaultEmp?.dailyRate || 3000);
       setNotes('');
       setAdminNote('管理員手動補登');
     }
-  }, [record, initialDate, initialEmployeeId, employees, isOpen]);
+  }, [isOpen]);
 
-  // 當調整上下班時間或切換人員時，自動試算工數與工資
-  useEffect(() => {
-    const emp = employees.find((e) => e.id === employeeId);
+  // 當使用者變更時間或人員時，自動重新計算工數與工資
+  const handleTimeOrUserChange = (newEmpId: string, newIn: string, newOut: string) => {
+    const emp = employees.find((e) => e.id === newEmpId);
     const dailyRate = emp?.dailyRate || 3000;
-    if (clockInTime && clockOutTime.trim()) {
-      const stats = calculateWorkStats(clockInTime, clockOutTime.trim(), dailyRate);
+    if (newIn && newOut.trim()) {
+      const stats = calculateWorkStats(newIn, newOut.trim(), dailyRate);
       setWageMultiplier(stats.wageMultiplier);
       setCalculatedWage(stats.calculatedWage);
     } else {
-      // 若下班留空，預設 1.0 工日薪
       setWageMultiplier(1.0);
       setCalculatedWage(dailyRate);
     }
-  }, [employeeId, clockInTime, clockOutTime, employees]);
+  };
 
   if (!isOpen) return null;
 
@@ -134,9 +122,14 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
       const emp = employees.find((e) => e.id === targetEmpId);
       const cleanClockOut = clockOutTime.trim();
       let durationHours = 0;
+      let finalMultiplier = wageMultiplier;
+      let finalWage = calculatedWage;
+
       if (cleanClockOut) {
         const stats = calculateWorkStats(clockInTime, cleanClockOut, emp?.dailyRate || 3000);
         durationHours = stats.durationHours;
+        finalMultiplier = stats.wageMultiplier;
+        finalWage = stats.calculatedWage;
       }
 
       await onSaveRecord({
@@ -145,12 +138,11 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
         employeeName: emp ? emp.name : '員工',
         date,
         clockInTime,
-        // 若下班時間留空，則傳入空字串，使打卡鐘能識別為「尚未下班」
-        clockOutTime: cleanClockOut || '',
+        clockOutTime: cleanClockOut, // 留空即代表出勤中
         siteName: siteName.trim(),
         durationHours,
-        wageMultiplier,
-        calculatedWage,
+        wageMultiplier: finalMultiplier,
+        calculatedWage: finalWage,
         notes,
         adminNote,
         modifiedByAdmin: true,
@@ -210,7 +202,11 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
               </label>
               <select
                 value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setEmployeeId(val);
+                  handleTimeOrUserChange(val, clockInTime, clockOutTime);
+                }}
                 required
                 className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
               >
@@ -247,26 +243,59 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 required
                 placeholder="08:00:00"
                 value={clockInTime}
-                onChange={(e) => setClockInTime(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setClockInTime(val);
+                  handleTimeOrUserChange(employeeId, val, clockOutTime);
+                }}
                 className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                下班打卡時間 <span className="text-slate-400 font-normal">(未下班請留空)</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700">
+                  下班時間 <span className="text-slate-400 font-normal">(留空=出勤中)</span>
+                </label>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClockOutTime('');
+                      handleTimeOrUserChange(employeeId, clockInTime, '');
+                    }}
+                    className="text-[10px] text-slate-500 hover:text-orange-600 underline"
+                  >
+                    清空(出勤中)
+                  </button>
+                  <span className="text-slate-300 text-[10px]">|</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClockOutTime('17:00:00');
+                      handleTimeOrUserChange(employeeId, clockInTime, '17:00:00');
+                    }}
+                    className="text-[10px] text-blue-600 hover:underline"
+                  >
+                    帶入17:00
+                  </button>
+                </div>
+              </div>
               <input
                 type="text"
-                placeholder="17:00:00 (留空即代表未下班)"
+                placeholder="留空即代表未下班"
                 value={clockOutTime}
-                onChange={(e) => setClockOutTime(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setClockOutTime(val);
+                  handleTimeOrUserChange(employeeId, clockInTime, val);
+                }}
                 className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
           </div>
 
-          {/* 工數折算與計算工資（已移除加班選項） */}
+          {/* 工數折算與計算工資 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -301,7 +330,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
             </div>
           </div>
 
-          {/* 施工案場（預設留空） */}
+          {/* 施工案場 */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               施工案場 / 地點 <span className="text-slate-400 font-normal">(選填)</span>
@@ -324,7 +353,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
               type="text"
               value={adminNote}
               onChange={(e) => setAdminNote(e.target.value)}
-              placeholder="例如：忘記打卡補登、現場提早收工補登"
+              placeholder="例如：忘記打卡補登、提早收工補登"
               className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
