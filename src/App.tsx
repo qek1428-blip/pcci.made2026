@@ -595,7 +595,7 @@ export default function App() {
       <button
         type="button"
         onClick={() => { playPunchSound('tap'); onClear(); }}
-        className="h-12 rounded-2xl bg-slate-100/80 border border-slate-200/60 hover:bg-slate-200/70 active:scale-95 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-all duration-150 flex items-center justify-center shadow-xs"
+        className="h-12 rounded-2xl bg-gray-300 border border-slate-200/60 hover:bg-slate-200/70 active:scale-95 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-all duration-150 flex items-center justify-center shadow-xs"
       >
         清除
       </button>
