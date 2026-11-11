@@ -209,7 +209,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
     <div className="space-y-6">
       {/* Toast feedback */}
       {successToast && (
-        <div className="p-4 rounded-xl bg-emerald-500 text-white shadow-lg flex items-center gap-3 animate-fade-in">
+        <div className="p-4 rounded-xl bg-taupe-500 text-white shadow-lg flex items-center gap-3 animate-fade-in">
           <CheckCircle2 className="w-6 h-6 shrink-0" />
           <div className="font-semibold text-sm sm:text-base">{successToast}</div>
         </div>
@@ -227,7 +227,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
 
           <div className="flex items-center shrink-0">
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/10 text-taupe-200 border border-white/10 whitespace-nowrap">
-              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-taupe-400 animate-pulse" />
               雲端打卡機連線中
             </span>
           </div>
@@ -282,7 +282,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
             出勤狀態
           </span>
           {isPunchedOut ? (
-            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+            <span className="text-xs font-semibold text-taupe-700 bg-taupe-50 px-2.5 py-1 rounded-full border border-taupe-200">
               ✓ 今日已完成下班打卡
             </span>
           ) : isPunchedIn ? (
@@ -326,7 +326,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
 
           <div className="p-3 rounded-xl bg-taupe-50 border border-taupe-100">
             <div className="text-xs text-taupe-500">預估當日工數薪資</div>
-            <div className="text-lg font-mono font-bold text-emerald-700 mt-1">
+            <div className="text-lg font-mono font-bold text-taupe-700 mt-1">
               {todayRecord?.calculatedWage
                 ? `NT$ ${todayRecord.calculatedWage.toLocaleString()}`
                 : isPunchedIn
@@ -453,7 +453,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
                     <span className="shrink-0">📍</span>
                     <span className="truncate">{site}</span>
                     {isRecent && (
-                      <span className="shrink-0 text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-normal">
+                      <span className="shrink-0 text-[10px] bg-taupe-100 text-taupe-800 px-1.5 py-0.2 rounded font-normal">
                         近兩週
                       </span>
                     )}
@@ -624,27 +624,27 @@ export const PunchClock: React.FC<PunchClockProps> = ({
               disabled={isSubmitting}
               className="w-full py-4 sm:py-5 rounded-2xl bg-taupe-900 hover:bg-taupe-800 active:scale-[0.98] text-white font-bold text-xl sm:text-2xl shadow-lg shadow-taupe-900/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <div className="w-9 h-9 rounded-full bg-taupe-500/20 text-taupe-400 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-taupe-400" />
               </div>
               <span className="tracking-wider">下班</span>
             </button>
           ) : (
             /* Completed Banner */
-            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 mb-2">
+            <div className="p-4 rounded-2xl bg-taupe-50 border border-taupe-200 text-center">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-taupe-100 text-taupe-700 mb-2">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h4 className="font-bold text-emerald-900 text-base">
+              <h4 className="font-bold text-taupe-900 text-base">
                 今日上下班打卡皆已完成！
               </h4>
-              <p className="text-xs text-emerald-700 mt-1">
+              <p className="text-xs text-taupe-700 mt-1">
                 打卡紀錄已自動同步存至薄薄工程行雲端表單。
               </p>
               {isAdmin && todayRecord && onEditRecord && (
                 <button
                   onClick={() => onEditRecord(todayRecord)}
-                  className="mt-3 px-4 py-1.5 text-xs font-semibold bg-white text-emerald-800 rounded-lg border border-emerald-300 hover:bg-emerald-50"
+                  className="mt-3 px-4 py-1.5 text-xs font-semibold bg-white text-taupe-800 rounded-lg border border-taupe-300 hover:bg-taupe-50"
                 >
                   管理員修正此筆打卡
                 </button>
