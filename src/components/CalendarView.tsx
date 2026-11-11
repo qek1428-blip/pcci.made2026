@@ -175,7 +175,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
         <div className="bg-white p-3 sm:p-4 rounded-xl border border-taupe-200 shadow-xs">
           <div className="text-[11px] sm:text-xs text-taupe-500 font-medium">總工數</div>
-          <div className="text-base sm:text-lg font-bold text-blue-600 font-mono mt-0.5 tabular-nums truncate">
+          <div className="text-base sm:text-lg font-bold text-taupe-600 font-mono mt-0.5 tabular-nums truncate">
             {displayedRecords
               .reduce((sum, r) => sum + (r.wageMultiplier || 1.0), 0)
               .toFixed(1)}{' '}
@@ -185,7 +185,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
         <div className="bg-white p-3 sm:p-4 rounded-xl border border-taupe-200 shadow-xs">
           <div className="text-[11px] sm:text-xs text-taupe-500 font-medium">預估日薪總額</div>
-          <div className="text-base sm:text-lg font-bold text-emerald-700 font-mono mt-0.5 tabular-nums truncate">
+          <div className="text-base sm:text-lg font-bold text-taupe-700 font-mono mt-0.5 tabular-nums truncate">
             NT${' '}
             {displayedRecords
               .reduce((sum, r) => sum + (r.calculatedWage || 0), 0)
@@ -200,7 +200,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <div className="flex items-center justify-between px-4 py-2 bg-taupe-50 border-b border-taupe-200 text-xs text-taupe-500">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 font-medium text-taupe-600">
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-taupe-50 text-taupe-700 border border-taupe-200">
                 WORK
               </span>
               有出工
@@ -217,13 +217,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
         {/* Day-of-week header */}
         <div className="grid grid-cols-7 border-b border-taupe-200 bg-taupe-100/70 text-center py-2 text-xs font-bold text-taupe-700">
-          <span className="text-rose-500">週日</span>
+          <span className="text-taupe-500">週日</span>
           <span>週一</span>
           <span>週二</span>
           <span>週三</span>
           <span>週四</span>
           <span>週五</span>
-          <span className="text-blue-500">週六</span>
+          <span className="text-taupe-500">週六</span>
         </div>
 
         {/* Days matrix */}
@@ -255,7 +255,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     : hasRecords
                     ? isWorkingAny
                       ? 'bg-amber-50/20 hover:bg-amber-50/50'
-                      : 'bg-emerald-50/20 hover:bg-emerald-50/50'
+                      : 'bg-orange-50/20 hover:bg-orange-50/50'
                     : 'bg-white hover:bg-taupe-50'
                 }`}
               >
@@ -285,7 +285,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-colors shadow-2xs ${
                         isWorkingAny
                           ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-taupe-50 text-taupe-700 border border-taupe-200'
                       }`}
                     >
                       WORK
@@ -428,7 +428,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                         <div className="bg-taupe-50 p-2 rounded-lg">
                           <span className="text-taupe-500 block">核算工資</span>
-                          <span className="font-mono font-bold text-emerald-700 text-sm">
+                          <span className="font-mono font-bold text-taupe-700 text-sm">
                             NT$ {(rec.calculatedWage || emp?.dailyRate || 0).toLocaleString()}
                           </span>
                         </div>
