@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Employee } from '../types';
 import { ChevronDown } from 'lucide-react';
-// 直接匯入你的 LOGO 圖片，Vite 會自動處理正確路徑
 import boboLogo from '../assets/images/bobo_logo.jpg';
 
 interface HeaderProps {
@@ -39,11 +38,11 @@ export const Header: React.FC<HeaderProps> = ({
   });
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Brand Zone */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="w-10 h-10 rounded-xl overflow-hidden bg-black border border-slate-800 flex items-center justify-center shrink-0 shadow-sm">
+          <div className="w-10 h-10 rounded-xl overflow-hidden bg-black border border-slate-700 flex items-center justify-center shrink-0 shadow-sm">
             <img
               src={boboLogo}
               alt="薄薄工程行"
@@ -52,14 +51,14 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-900 text-base sm:text-lg tracking-tight">
+              <span className="font-bold text-white text-base sm:text-lg tracking-tight">
                 薄薄工程行
               </span>
-              <span className="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 bg-orange-100 text-orange-800 rounded">
+              <span className="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 bg-orange-500/20 border border-orange-500/40 text-orange-400 rounded">
                 打卡系統
               </span>
             </div>
-            <p className="text-xs text-slate-500 hidden sm:block">
+            <p className="text-xs text-slate-400 hidden sm:block">
               日薪制員工考勤 · 雲端表單即時同步
             </p>
           </div>
@@ -68,11 +67,11 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right Zone: User Switcher & Status Pill */}
         <div className="flex items-center gap-2 shrink-0">
           {/* Live Clock on desktop */}
-          <div className="text-right hidden sm:block mr-1">
-            <div className="text-sm font-mono font-bold text-slate-900 tabular-nums">
+          <div className="text-right hidden sm:block mr-2">
+            <div className="text-sm font-mono font-bold text-slate-100 tabular-nums">
               {timeStr}
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-slate-400">
               {dateStr}
             </div>
           </div>
@@ -87,14 +86,14 @@ export const Header: React.FC<HeaderProps> = ({
             return (
               <button
                 onClick={onOpenSwitchUser}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 active:scale-[0.98] transition-all text-left"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-[0.98] transition-all text-left shadow-sm"
                 title="點擊切換打卡人員或管理員"
               >
                 <div className="text-left flex flex-col">
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 leading-tight">
+                  <span className="text-xs sm:text-sm font-bold text-slate-100 leading-tight">
                     {activeEmployee.name}
                   </span>
-                  <span className="text-[10px] text-slate-500 leading-tight">
+                  <span className="text-[10px] text-orange-400 leading-tight font-semibold">
                     {roleLabel}
                   </span>
                 </div>
