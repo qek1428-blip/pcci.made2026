@@ -865,7 +865,7 @@ export default function App() {
             setReportPhone(currentEmployee.phone || '');
             setIsReportModalOpen(true);
           }}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-300/80 hover:border-amber-400 text-amber-900 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 shadow-xs font-semibold"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-gray-500/10 to-gray-400 border border-amber-300/80 hover:border-amber-400 text-amber-900 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 shadow-xs font-semibold"
         >
           <MessageSquareWarning className="w-3.5 h-3.5 text-amber-600" />
           <span>回報問題給老闆</span>
