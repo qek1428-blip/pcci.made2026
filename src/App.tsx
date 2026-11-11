@@ -323,4 +323,75 @@ export default function App() {
             employees={employees}
             records={records}
             onOpenSwitchUser={() => setIsUserSwitchOpen(true)}
-            onAddManualPunch={handleOpen
+            onAddManualPunch={handleOpenManualPunch}
+            onAddEmployee={handleAddEmployee}
+            onUpdateEmployee={handleUpdateEmployee}
+            onDeleteEmployee={handleDeleteEmployee}
+            onEditRecord={handleOpenEditRecord}
+          />
+        )}
+      </main>
+
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 pb-safe">
+        <div className="grid grid-cols-4 h-16 items-center">
+          <button
+            onClick={() => { playPunchSound('tap'); setActiveTab('punch'); }}
+            className={`flex flex-col items-center justify-center h-full transition-colors ${
+              activeTab === 'punch' ? 'text-orange-600' : 'text-slate-400'
+            }`}
+          >
+            <Clock className="w-5 h-5" />
+            <span className="text-[10px] font-bold mt-1">打卡鐘</span>
+          </button>
+          <button
+            onClick={() => { playPunchSound('tap'); setActiveTab('calendar'); }}
+            className={`flex flex-col items-center justify-center h-full transition-colors ${
+              activeTab === 'calendar' ? 'text-blue-600' : 'text-slate-400'
+            }`}
+          >
+            <Calendar className="w-5 h-5" />
+            <span className="text-[10px] font-bold mt-1">打卡日曆</span>
+          </button>
+          <button
+            onClick={() => { playPunchSound('tap'); setActiveTab('sheet'); }}
+            className={`flex flex-col items-center justify-center h-full transition-colors ${
+              activeTab === 'sheet' ? 'text-emerald-600' : 'text-slate-400'
+            }`}
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+            <span className="text-[10px] font-bold mt-1">雲端表單</span>
+          </button>
+          <button
+            onClick={() => { playPunchSound('tap'); setActiveTab('admin'); }}
+            className={`flex flex-col items-center justify-center h-full transition-colors ${
+              activeTab === 'admin' ? 'text-amber-600' : 'text-slate-400'
+            }`}
+          >
+            <Shield className="w-5 h-5" />
+            <span className="text-[10px] font-bold mt-1">管理後台</span>
+          </button>
+        </div>
+      </nav>
+
+      <UserSwitchModal
+        isOpen={isUserSwitchOpen}
+        onClose={() => setIsUserSwitchOpen(false)}
+        employees={employees}
+        currentEmployee={currentEmployee}
+        isAdmin={isAdmin}
+        onSelectUser={handleSelectUser}
+        adminPin={adminPin}
+      />
+      <EditRecordModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        record={editingRecord}
+        employees={employees}
+        onSaveRecord={handleSaveRecord}
+        onDeleteRecord={handleDeleteRecord}
+        initialDate={manualDate}
+        initialEmployeeId={manualEmployeeId}
+      />
+    </div>
+  );
+}
