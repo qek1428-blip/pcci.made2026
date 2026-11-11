@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { PunchClock } from './components/PunchClock';
 import { CalendarView } from './components/CalendarView';
@@ -10,6 +10,8 @@ import { Employee, PunchRecord, CompanyState } from './types';
 import { Clock, Calendar, FileSpreadsheet, Shield } from 'lucide-react';
 import { playPunchSound } from './utils/sound';
 
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhrpQIs-ygEFPOhVM8tafjpjSccqGMcsZ2-41WuxvEL-N9jXWi7eJVTpkKqD1wYEBX/exec';
+
 export default function App() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [records, setRecords] = useState<PunchRecord[]>([]);
@@ -18,73 +20,33 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState<'punch' | 'calendar' | 'sheet' | 'admin'>('punch');
 
-  // Modals
+  // 彈跳視窗狀態
   const [isUserSwitchOpen, setIsUserSwitchOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PunchRecord | null>(null);
   const [manualDate, setManualDate] = useState<string | undefined>();
   const [manualEmployeeId, setManualEmployeeId] = useState<string | undefined>();
 
-  // Fetch initial state (修正版：完美支援無後端的 GitHub Pages)
+  // 從 Google 試算表取得最新資料
   const fetchState = async () => {
     try {
-      const res = await fetch('/api/state');
+      const res = await fetch(GOOGLE_SCRIPT_URL);
       const json = await res.json();
-      if (res.ok && json.success && json.data) {
+      if (json.success && json.data) {
         const data: CompanyState = json.data;
         setEmployees(data.employees);
         setRecords(data.records);
         if (data.settings?.adminPin) {
           setAdminPin(data.settings.adminPin);
         }
-        if (!currentEmployee) {
+        if (!currentEmployee && data.employees.length > 0) {
           const firstWorker = data.employees.find((e) => e.role === 'worker') || data.employees[0];
           setCurrentEmployee(firstWorker);
           setIsAdmin(firstWorker.role === 'admin');
         }
-        return; // 成功讀取後端資料就結束
       }
     } catch (err) {
-      console.warn('無法連線到雲端伺服器，改用瀏覽器本機儲存模式 (LocalStorage)');
-    }
-
-    // --- 以下是本機模式 (GitHub Pages) 的備用方案 ---
-    const cached = localStorage.getItem('bobo_state');
-    let loadedEmployees: Employee[] = [];
-
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        loadedEmployees = parsed.employees || [];
-        setRecords(parsed.records || []);
-        if (parsed.adminPin) setAdminPin(parsed.adminPin);
-      } catch {
-        // 解析失敗忽略
-      }
-    }
-
-    // 如果是第一次打開網頁，沒有任何員工資料，預設建立老闆帳號以防卡轉圈
-    if (loadedEmployees.length === 0) {
-      const defaultAdmin: Employee = {
-        id: 'admin-001',
-        name: '薄老闆',
-        dailyRate: 3000,
-        role: 'admin',
-        workType: '管理員',
-        phone: '',
-        avatarColor: 'bg-amber-600',
-        active: true,
-      };
-      loadedEmployees = [defaultAdmin];
-    }
-
-    setEmployees(loadedEmployees);
-
-    // 設定當前操作的使用者
-    if (!currentEmployee) {
-      const firstWorker = loadedEmployees.find((e) => e.role === 'worker') || loadedEmployees[0];
-      setCurrentEmployee(firstWorker);
-      setIsAdmin(firstWorker.role === 'admin');
+      console.error('Google 試算表連線失敗:', err);
     }
   };
 
@@ -92,220 +54,147 @@ export default function App() {
     fetchState();
   }, []);
 
-  // Save cache to localStorage
-  useEffect(() => {
-    if (employees.length > 0) {
-      localStorage.setItem(
-        'bobo_state',
-        JSON.stringify({ employees, records, adminPin })
-      );
-    }
-  }, [employees, records, adminPin]);
-
-  // Today's date YYYY-MM-DD
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Current employee's today record
   const currentTodayRecord = records.find(
     (r) => r.employeeId === currentEmployee?.id && r.date === todayStr
   );
 
-  // 1. Clock In Handler
+  // 1. 上班打卡
   const handlePunchIn = async (siteName: string, notes: string, locationStr?: string) => {
     if (!currentEmployee) return;
     const now = new Date();
     const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+    const tempRecord: PunchRecord = {
+      id: `rec-${todayStr}-${currentEmployee.id}`,
+      employeeId: currentEmployee.id,
+      employeeName: currentEmployee.name,
+      date: todayStr,
+      clockInTime: timeStr,
+      siteName,
+      notes,
+      source: 'mobile_web',
+      wageMultiplier: 1.0,
+      calculatedWage: currentEmployee.dailyRate,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+    setRecords((prev) => [tempRecord, ...prev.filter((r) => r.id !== tempRecord.id)]);
+
     try {
-      const res = await fetch('/api/punch/in', {
+      await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'punchIn',
           employeeId: currentEmployee.id,
           date: todayStr,
           time: timeStr,
           siteName,
           notes,
-          location: { address: locationStr || '現場打卡' },
-          source: 'mobile_web',
+          locationStr,
         }),
       });
-      if (!res.ok) throw new Error('強制進入本機模式');
-      const resData = await res.json();
-      if (resData.success) {
-        setRecords((prev) => [resData.record, ...prev.filter((r) => r.id !== resData.record.id)]);
-      }
+      fetchState();
     } catch (err) {
-      // Offline fallback
-      const offlineRecord: PunchRecord = {
-        id: `rec-${todayStr}-${currentEmployee.id}`,
-        employeeId: currentEmployee.id,
-        employeeName: currentEmployee.name,
-        date: todayStr,
-        clockInTime: timeStr,
-        siteName,
-        notes,
-        source: 'mobile_web',
-        wageMultiplier: 1.0,
-        calculatedWage: currentEmployee.dailyRate,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setRecords((prev) => [offlineRecord, ...prev]);
+      console.error('同步至 Google 試算表失敗', err);
     }
   };
 
-  // 2. Clock Out Handler
+  // 2. 下班打卡
   const handlePunchOut = async (notes?: string) => {
     if (!currentEmployee) return;
     const now = new Date();
     const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+    setRecords((prev) =>
+      prev.map((r) => {
+        if (r.employeeId === currentEmployee.id && r.date === todayStr) {
+          return {
+            ...r,
+            clockOutTime: timeStr,
+            durationHours: 8.5,
+            updatedAt: now.toISOString(),
+          };
+        }
+        return r;
+      })
+    );
+
     try {
-      const res = await fetch('/api/punch/out', {
+      await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'punchOut',
           employeeId: currentEmployee.id,
           date: todayStr,
           time: timeStr,
           notes,
         }),
       });
-      if (!res.ok) throw new Error('強制進入本機模式');
-      const resData = await res.json();
-      if (resData.success) {
-        setRecords((prev) =>
-          prev.map((r) => (r.id === resData.record.id ? resData.record : r))
-        );
-      }
+      fetchState();
     } catch (err) {
-      setRecords((prev) =>
-        prev.map((r) => {
-          if (r.employeeId === currentEmployee.id && r.date === todayStr) {
-            return {
-              ...r,
-              clockOutTime: timeStr,
-              durationHours: 8.5,
-              wageMultiplier: 1.0,
-              calculatedWage: currentEmployee.dailyRate,
-              updatedAt: new Date().toISOString(),
-            };
-          }
-          return r;
-        })
-      );
+      console.error('下班同步失敗', err);
     }
   };
 
-  // 3. Admin Save Record
+  // 3. 管理員儲存/補登紀錄
   const handleSaveRecord = async (data: Partial<PunchRecord>) => {
     try {
-      if (data.id) {
-        const res = await fetch(`/api/records/${data.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        if (!res.ok) throw new Error('強制進入本機模式');
-        const resData = await res.json();
-        if (resData.success) {
-          setRecords((prev) => prev.map((r) => (r.id === data.id ? resData.record : r)));
-        }
-      } else {
-        const res = await fetch('/api/records/manual', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        if (!res.ok) throw new Error('強制進入本機模式');
-        const resData = await res.json();
-        if (resData.success) {
-          setRecords((prev) => [resData.record, ...prev]);
-        }
-      }
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'saveRecord', record: data }),
+      });
+      fetchState();
     } catch (err) {
-      if (data.id) {
-        setRecords((prev) => prev.map((r) => (r.id === data.id ? ({ ...r, ...data } as PunchRecord) : r)));
-      } else {
-        const fakeId = `rec-manual-${Date.now()}`;
-        setRecords((prev) => [{ ...data, id: fakeId } as PunchRecord, ...prev]);
-      }
+      console.error('儲存紀錄失敗', err);
     }
   };
 
-  // 4. Admin Delete Record
+  // 4. 管理員刪除紀錄
   const handleDeleteRecord = async (recordId: string) => {
+    setRecords((prev) => prev.filter((r) => r.id !== recordId));
     try {
-      const res = await fetch(`/api/records/${recordId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('強制進入本機模式');
-      setRecords((prev) => prev.filter((r) => r.id !== recordId));
-    } catch {
-      setRecords((prev) => prev.filter((r) => r.id !== recordId));
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteRecord', id: recordId }),
+      });
+    } catch (err) {
+      console.error('刪除失敗', err);
     }
   };
 
-  // 5. Admin Add Employee
+  // 5. 新增員工
   const handleAddEmployee = async (empData: Partial<Employee>) => {
     try {
-      const res = await fetch('/api/employees', {
+      await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(empData),
+        body: JSON.stringify({ action: 'addEmployee', employee: empData }),
       });
-      if (!res.ok) throw new Error('強制進入本機模式');
-      const resData = await res.json();
-      if (resData.success) {
-        setEmployees((prev) => [...prev, resData.employee]);
-      }
-    } catch {
-      const fakeId = `emp-${Date.now()}`;
-      setEmployees((prev) => [
-        ...prev,
-        {
-          id: fakeId,
-          name: empData.name || '新員工',
-          dailyRate: empData.dailyRate || 3000,
-          role: empData.role || 'worker',
-          workType: empData.workType || '泥水工程',
-          phone: empData.phone || '',
-          avatarColor: 'bg-indigo-600',
-          active: true,
-        },
-      ]);
+      fetchState();
+    } catch (err) {
+      console.error('新增員工失敗', err);
     }
   };
 
-  // 6. Admin Update Employee
+  // 6. 更新員工資料
   const handleUpdateEmployee = async (id: string, empData: Partial<Employee>) => {
-    try {
-      const res = await fetch(`/api/employees/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(empData),
-      });
-      if (!res.ok) throw new Error('強制進入本機模式');
-      const resData = await res.json();
-      if (resData.success) {
-        setEmployees((prev) => prev.map((e) => (e.id === id ? resData.employee : e)));
-        if (currentEmployee?.id === id) setCurrentEmployee(resData.employee);
-      }
-    } catch {
-      setEmployees((prev) => prev.map((e) => (e.id === id ? { ...e, ...empData } : e)));
-      if (currentEmployee?.id === id) {
-        setCurrentEmployee((prev) => (prev ? { ...prev, ...empData } : null));
-      }
+    setEmployees((prev) => prev.map((e) => (e.id === id ? { ...e, ...empData } : e)));
+    if (currentEmployee?.id === id) {
+      setCurrentEmployee((prev) => (prev ? { ...prev, ...empData } : null));
     }
   };
 
-  // 7. Admin Delete Employee
+  // 7. 刪除員工
   const handleDeleteEmployee = async (id: string) => {
+    setEmployees((prev) => prev.filter((e) => e.id !== id));
     try {
-      const res = await fetch(`/api/employees/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('強制進入本機模式');
-      setEmployees((prev) => prev.filter((e) => e.id !== id));
-    } catch {
-      setEmployees((prev) => prev.filter((e) => e.id !== id));
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteEmployee', id }),
+      });
+    } catch (err) {
+      console.error('刪除員工失敗', err);
     }
   };
 
@@ -342,7 +231,7 @@ export default function App() {
         <div className="text-center space-y-3">
           <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
           <h2 className="text-lg font-bold">薄薄工程行打卡系統載入中...</h2>
-          <p className="text-xs text-slate-400">正在連接雲端考勤資料庫</p>
+          <p className="text-xs text-slate-400">正在連接 Google 雲端考勤資料庫</p>
         </div>
       </div>
     );
@@ -434,75 +323,4 @@ export default function App() {
             employees={employees}
             records={records}
             onOpenSwitchUser={() => setIsUserSwitchOpen(true)}
-            onAddManualPunch={handleOpenManualPunch}
-            onAddEmployee={handleAddEmployee}
-            onUpdateEmployee={handleUpdateEmployee}
-            onDeleteEmployee={handleDeleteEmployee}
-            onEditRecord={handleOpenEditRecord}
-          />
-        )}
-      </main>
-
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 pb-safe">
-        <div className="grid grid-cols-4 h-16 items-center">
-          <button
-            onClick={() => { playPunchSound('tap'); setActiveTab('punch'); }}
-            className={`flex flex-col items-center justify-center h-full transition-colors ${
-              activeTab === 'punch' ? 'text-orange-600' : 'text-slate-400'
-            }`}
-          >
-            <Clock className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">打卡鐘</span>
-          </button>
-          <button
-            onClick={() => { playPunchSound('tap'); setActiveTab('calendar'); }}
-            className={`flex flex-col items-center justify-center h-full transition-colors ${
-              activeTab === 'calendar' ? 'text-blue-600' : 'text-slate-400'
-            }`}
-          >
-            <Calendar className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">打卡日曆</span>
-          </button>
-          <button
-            onClick={() => { playPunchSound('tap'); setActiveTab('sheet'); }}
-            className={`flex flex-col items-center justify-center h-full transition-colors ${
-              activeTab === 'sheet' ? 'text-emerald-600' : 'text-slate-400'
-            }`}
-          >
-            <FileSpreadsheet className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">雲端表單</span>
-          </button>
-          <button
-            onClick={() => { playPunchSound('tap'); setActiveTab('admin'); }}
-            className={`flex flex-col items-center justify-center h-full transition-colors ${
-              activeTab === 'admin' ? 'text-amber-600' : 'text-slate-400'
-            }`}
-          >
-            <Shield className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">管理後台</span>
-          </button>
-        </div>
-      </nav>
-
-      <UserSwitchModal
-        isOpen={isUserSwitchOpen}
-        onClose={() => setIsUserSwitchOpen(false)}
-        employees={employees}
-        currentEmployee={currentEmployee}
-        isAdmin={isAdmin}
-        onSelectUser={handleSelectUser}
-        adminPin={adminPin}
-      />
-      <EditRecordModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        record={editingRecord}
-        employees={employees}
-        onSaveRecord={handleSaveRecord}
-        onDeleteRecord={handleDeleteRecord}
-        initialDate={manualDate}
-        initialEmployeeId={manualEmployeeId}
-      />
-    </div>
-  );
-}
+            onAddManualPunch={handleOpen
