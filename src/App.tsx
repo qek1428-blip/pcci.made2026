@@ -5,14 +5,14 @@ import { CalendarView } from './components/CalendarView';
 import { CloudSheetView } from './components/CloudSheetView';
 import { AdminPanel } from './components/AdminPanel';
 import { UserSwitchModal } from './components/UserSwitchModal';
-import { EditRecordModal } from './components/EditRecordModal';
+import { EditRecordModal, calculateWorkStats } from './components/EditRecordModal';
 import { Employee, PunchRecord, CompanyState } from './types';
 import { Clock, Calendar, FileSpreadsheet, Shield } from 'lucide-react';
 import { playPunchSound } from './utils/sound';
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhrpQIs-ygEFPOhVM8tafjpjSccqGMcsZ2-41WuxvEL-N9jXWi7eJVTpkKqD1wYEBX/exec';
 
-// 格式化日期為 YYYY-MM-DD，相容 Google 試算表傳來的各種格式
+// 格式化日期為 YYYY-MM-DD
 const formatRecordDate = (val: any): string => {
   if (!val) return '';
   const str = String(val).trim();
@@ -30,7 +30,7 @@ const formatRecordDate = (val: any): string => {
   return str;
 };
 
-// 格式化時間為 HH:mm:ss，相容 8:00:00 或 Date 字串
+// 格式化時間為 HH:mm:ss
 const formatRecordTime = (val: any): string => {
   if (!val) return '';
   const str = String(val).trim();
@@ -83,7 +83,7 @@ export default function App() {
     }
   };
 
-  // 從 Google 試算表取得最新資料並進行格式校正
+  // 從 Google 試算表取得最新資料
   const fetchState = async () => {
     try {
       const res = await fetch(GOOGLE_SCRIPT_URL);
@@ -113,13 +113,12 @@ export default function App() {
         }
 
         if (data.records) {
-          // 校正並標準化所有打卡紀錄的日期與時間格式
           const sanitizedRecords: PunchRecord[] = data.records.map((r: any) => ({
             ...r,
             date: formatRecordDate(r.date),
             clockInTime: formatRecordTime(r.clockInTime),
             clockOutTime: r.clockOutTime ? formatRecordTime(r.clockOutTime) : '',
-            durationHours: Number(r.durationHours) || (r.clockOutTime ? 8.5 : 0),
+            durationHours: Number(r.durationHours) || 0,
             wageMultiplier: Number(r.wageMultiplier) || 1.0,
             calculatedWage: Number(r.calculatedWage) || 0,
           }));
@@ -157,9 +156,11 @@ export default function App() {
       employeeName: currentEmployee.name,
       date: todayStr,
       clockInTime: timeStr,
+      clockOutTime: '',
       siteName,
       notes,
       source: 'mobile_web',
+      durationHours: 0,
       wageMultiplier: 1.0,
       calculatedWage: currentEmployee.dailyRate,
       createdAt: now.toISOString(),
@@ -178,11 +179,17 @@ export default function App() {
     });
   };
 
-  // 2. 下班打卡
+  // 2. 下班打卡（動態計算工時與工數，不再寫死 8.5 小時）
   const handlePunchOut = async (notes?: string) => {
     if (!currentEmployee) return;
     const now = new Date();
     const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const todayRec = records.find((r) => r.employeeId === currentEmployee.id && r.date === todayStr);
+    const inTime = todayRec?.clockInTime || timeStr;
+
+    // 計算精準工時與工數
+    const stats = calculateWorkStats(inTime, timeStr, currentEmployee.dailyRate);
 
     setRecords((prev) =>
       prev.map((r) => {
@@ -190,7 +197,9 @@ export default function App() {
           return {
             ...r,
             clockOutTime: timeStr,
-            durationHours: 8.5,
+            durationHours: stats.durationHours,
+            wageMultiplier: stats.wageMultiplier,
+            calculatedWage: stats.calculatedWage,
             updatedAt: now.toISOString(),
           };
         }
@@ -210,17 +219,19 @@ export default function App() {
   // 3. 管理員儲存/補登紀錄
   const handleSaveRecord = async (data: Partial<PunchRecord>) => {
     const recordId = data.id || `rec-${data.date || todayStr}-${data.employeeId}-${Date.now()}`;
+    const cleanClockOut = data.clockOutTime ? formatRecordTime(data.clockOutTime) : '';
+
     const newRecord: PunchRecord = {
       id: recordId,
       employeeId: data.employeeId || '',
       employeeName: data.employeeName || '員工',
       date: formatRecordDate(data.date || todayStr),
       clockInTime: formatRecordTime(data.clockInTime || '08:00:00'),
-      clockOutTime: data.clockOutTime ? formatRecordTime(data.clockOutTime) : '17:30:00',
+      clockOutTime: cleanClockOut,
       siteName: data.siteName || '',
       wageMultiplier: data.wageMultiplier !== undefined ? Number(data.wageMultiplier) : 1.0,
       calculatedWage: Number(data.calculatedWage) || 0,
-      durationHours: Number(data.durationHours) || 8.5,
+      durationHours: Number(data.durationHours) || 0,
       notes: data.notes || '',
       adminNote: data.adminNote || '管理員手動補登',
       modifiedByAdmin: true,
