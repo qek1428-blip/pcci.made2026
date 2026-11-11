@@ -38,11 +38,11 @@ export const Header: React.FC<HeaderProps> = ({
   });
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E6E1D8]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Brand Zone */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="w-10 h-10 rounded-xl overflow-hidden bg-black border border-slate-700 flex items-center justify-center shrink-0 shadow-sm">
+          <div className="w-10 h-10 rounded-xl overflow-hidden bg-black border border-[#2B2521] flex items-center justify-center shrink-0 shadow-sm">
             <img
               src={boboLogo}
               alt="薄薄工程行"
@@ -51,14 +51,14 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-white text-base sm:text-lg tracking-tight">
+              <span className="font-bold text-[#2B2521] text-base sm:text-lg tracking-tight">
                 薄薄工程行
               </span>
-              <span className="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 bg-orange-500/20 border border-orange-500/40 text-orange-400 rounded">
+              <span className="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 bg-[#EAE3DA] text-[#4A3D32] border border-[#D4C9BC] rounded">
                 打卡系統
               </span>
             </div>
-            <p className="text-xs text-slate-400 hidden sm:block">
+            <p className="text-xs text-[#706458] hidden sm:block">
               日薪制員工考勤 · 雲端表單即時同步
             </p>
           </div>
@@ -66,38 +66,36 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Zone: User Switcher & Status Pill */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Live Clock on desktop */}
-          <div className="text-right hidden sm:block mr-2">
-            <div className="text-sm font-mono font-bold text-slate-100 tabular-nums">
+          <div className="text-right hidden sm:block mr-1">
+            <div className="text-sm font-mono font-bold text-[#2B2521] tabular-nums">
               {timeStr}
             </div>
-            <div className="text-xs text-slate-400">
+            <div className="text-xs text-[#706458]">
               {dateStr}
             </div>
           </div>
 
-          {/* Single stable Identity Button */}
           {(() => {
             const activeEmployee =
               employees.find((e) => e.id === currentEmployee.id) || currentEmployee;
-            const roleLabel =
-              activeEmployee.role === 'admin' || isAdmin ? '管理人' : '員工';
+            const isBoss = activeEmployee.role === 'admin' || isAdmin;
+            const roleLabel = isBoss ? '管理人' : '員工';
 
             return (
               <button
                 onClick={onOpenSwitchUser}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-[0.98] transition-all text-left shadow-sm"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#E6E1D8] bg-white hover:bg-[#FAF8F5] active:scale-[0.98] transition-all text-left shadow-2xs"
                 title="點擊切換打卡人員或管理員"
               >
                 <div className="text-left flex flex-col">
-                  <span className="text-xs sm:text-sm font-bold text-slate-100 leading-tight">
+                  <span className="text-xs sm:text-sm font-bold text-[#2B2521] leading-tight">
                     {activeEmployee.name}
                   </span>
-                  <span className="text-[10px] text-orange-400 leading-tight font-semibold">
+                  <span className={`text-[10px] leading-tight font-medium ${isBoss ? 'text-[#6E5D4F]' : 'text-[#8A7D70]'}`}>
                     {roleLabel}
                   </span>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-0.5" />
+                <ChevronDown className="w-3.5 h-3.5 text-[#998D80] shrink-0 ml-0.5" />
               </button>
             );
           })()}
