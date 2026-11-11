@@ -286,7 +286,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <div className="pt-2 flex justify-end">
                           <button
                             onClick={() => onEditRecord(todayRec)}
-                            className="text-orange-600 font-bold text-xs hover:underline"
+                            className="text-taupe-600 font-bold text-xs hover:underline"
                           >
                             修改今日紀錄 ➔
                           </button>
@@ -297,7 +297,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <span>今日尚無打卡紀錄</span>
                         <button
                           onClick={() => onAddManualPunch(todayStr, emp.id)}
-                          className="text-xs font-bold text-orange-600 hover:underline"
+                          className="text-xs font-bold text-taupe-600 hover:underline"
                         >
                           + 幫他補登打卡
                         </button>
@@ -326,7 +326,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 playPunchSound('tap');
                 setShowAddEmpModal(true);
               }}
-              className="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
+              className="px-3.5 py-2 bg-taupe-600 hover:bg-taupe-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition-colors shrink-0"
             >
               <UserPlus className="w-4 h-4" />
               <span>新增員工</span>
@@ -343,7 +343,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   key={emp.id}
                   className={`rounded-xl border transition-all overflow-hidden ${
                     isExpanded
-                      ? 'border-orange-400 bg-orange-50/20 shadow-xs'
+                      ? 'border-taupe-400 bg-taupe-50/20 shadow-xs'
                       : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
@@ -373,7 +373,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       </span>
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400">
                         {isExpanded ? (
-                          <ChevronUp className="w-4 h-4 text-orange-600" />
+                          <ChevronUp className="w-4 h-4 text-taupe-600" />
                         ) : (
                           <ChevronDown className="w-4 h-4" />
                         )}
@@ -432,7 +432,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           onClick={() => handleOpenEdit(emp)}
                           className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 flex items-center gap-1.5 transition-colors shadow-xs"
                         >
-                          <Edit2 className="w-3.5 h-3.5 text-orange-400" />
+                          <Edit2 className="w-3.5 h-3.5 text-taupe-400" />
                           <span>修改人員資料</span>
                         </button>
                       </div>
@@ -476,7 +476,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500 font-semibold"
                 />
               </div>
 
@@ -489,7 +489,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   placeholder="0912-345-678"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500 font-mono"
                 />
               </div>
 
@@ -504,7 +504,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     value={editType}
                     onChange={(e) => setEditType(e.target.value)}
                     placeholder="如：泥作師傅、水電"
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500"
                   />
                 </div>
 
@@ -518,7 +518,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     required
                     value={editRate}
                     onChange={(e) => setEditRate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono font-bold text-emerald-700"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500 font-mono font-bold text-emerald-700"
                   />
                 </div>
               </div>
@@ -530,7 +530,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <select
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value as any)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500"
                 >
                   <option value="worker">現場員工 (僅打卡與查看)</option>
                   <option value="admin">工程行管理人 (全權修改與管理)</option>
@@ -547,7 +547,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 py-2.5 text-xs font-bold text-white bg-orange-600 rounded-xl hover:bg-orange-700 flex items-center justify-center gap-1.5"
+                  className="w-1/2 py-2.5 text-xs font-bold text-white bg-taupe-600 rounded-xl hover:bg-taupe-700 flex items-center justify-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
                   <span>儲存變更</span>
@@ -588,7 +588,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   placeholder="例如：王小明"
                   value={newEmpName}
                   onChange={(e) => setNewEmpName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500"
                 />
               </div>
 
@@ -601,7 +601,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   placeholder="例如：0912-345-678"
                   value={newEmpPhone}
                   onChange={(e) => setNewEmpPhone(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500"
                 />
               </div>
 
@@ -613,7 +613,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <select
                     value={newEmpType}
                     onChange={(e) => setNewEmpType(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500"
                   >
                     <option value="泥作師傅">泥作師傅</option>
                     <option value="水電師傅">水電師傅</option>
@@ -634,7 +634,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     required
                     value={newEmpRate}
                     onChange={(e) => setNewEmpRate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono font-bold text-emerald-700"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500 font-mono font-bold text-emerald-700"
                   />
                 </div>
               </div>
@@ -646,7 +646,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <select
                   value={newEmpRole}
                   onChange={(e) => setNewEmpRole(e.target.value as any)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500"
                 >
                   <option value="worker">現場員工 (僅打卡與查看)</option>
                   <option value="admin">工程行管理人 (全權修改與管理)</option>
@@ -663,7 +663,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 py-2.5 text-xs font-bold text-white bg-orange-600 rounded-xl hover:bg-orange-700 flex items-center justify-center gap-1.5"
+                  className="w-1/2 py-2.5 text-xs font-bold text-white bg-taupe-600 rounded-xl hover:bg-taupe-700 flex items-center justify-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
                   <span>確認新增</span>
