@@ -10,6 +10,9 @@ import { Employee, PunchRecord, CompanyState } from './types';
 import { Clock, Calendar, FileSpreadsheet, Shield } from 'lucide-react';
 import { playPunchSound } from './utils/sound';
 
+// 匯入開場載入圖片
+import splashImg from './assets/images/splash.jpg';
+
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhrpQIs-ygEFPOhVM8tafjpjSccqGMcsZ2-41WuxvEL-N9jXWi7eJVTpkKqD1wYEBX/exec';
 
 // 格式化日期為 YYYY-MM-DD
@@ -124,7 +127,7 @@ export default function App() {
             let wageMultiplier = Number(r.wageMultiplier) || 1.0;
             let calculatedWage = Number(r.calculatedWage) || 0;
 
-            // 自動校驗修復：若已有上下班時間，依最新規則重新核算工時與工數（自動修復舊 8.5 錯誤紀錄）
+            // 自動校驗修復：若已有上下班時間，依最新規則重新核算工時與工數
             if (inTimeStr && outTimeStr) {
               const emp = loadedEmployees.find((e) => String(e.id) === String(r.employeeId));
               const baseRate = emp ? emp.dailyRate : (calculatedWage > 0 ? calculatedWage : 3000);
@@ -163,7 +166,6 @@ export default function App() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // 取得當前使用者今天的打卡紀錄
   const currentTodayRecord = records.find(
     (r) => r.employeeId === currentEmployee?.id && r.date === todayStr
   );
@@ -180,7 +182,7 @@ export default function App() {
       employeeName: currentEmployee.name,
       date: todayStr,
       clockInTime: timeStr,
-      clockOutTime: '', // 上班打卡時下班時間為空
+      clockOutTime: '',
       siteName: siteName || '',
       notes: notes || '',
       source: 'mobile_web',
@@ -199,7 +201,7 @@ export default function App() {
     });
   };
 
-  // 2. 下班打卡（改用 saveRecord 送出精確工時與折半工資）
+  // 2. 下班打卡
   const handlePunchOut = async (notes?: string) => {
     if (!currentEmployee) return;
     const now = new Date();
@@ -208,7 +210,6 @@ export default function App() {
     const todayRec = records.find((r) => r.employeeId === currentEmployee.id && r.date === todayStr);
     const inTime = todayRec?.clockInTime || timeStr;
 
-    // 精準計算工時與折半工數
     const stats = calculateWorkStats(inTime, timeStr, currentEmployee.dailyRate);
 
     const updatedRecord: PunchRecord = {
@@ -232,7 +233,6 @@ export default function App() {
       prev.map((r) => (r.employeeId === currentEmployee.id && r.date === todayStr ? updatedRecord : r))
     );
 
-    // 透過 saveRecord 完整寫入 Google 試算表，跳過舊版後端寫死 8.5 的漏洞
     await sendToGoogleSheet({
       action: 'saveRecord',
       record: updatedRecord,
@@ -326,13 +326,44 @@ export default function App() {
     setIsAdmin(isUnlockedAdmin || emp.role === 'admin');
   };
 
+  // 專屬黑底設計載入畫面（搭配白色動態進度線條與白圈）
   if (!currentEmployee) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4">
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <h2 className="text-lg font-bold">薄薄工程行打卡系統載入中...</h2>
-          <p className="text-xs text-slate-400">正在連接 Google 雲端考勤資料庫</p>
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white select-none">
+        <div className="w-full max-w-[280px] flex flex-col items-center space-y-5">
+          {/* 設計名片主圖 */}
+          <div className="w-full overflow-hidden rounded-2xl shadow-2xl bg-black">
+            <img
+              src={splashImg}
+              alt="專業系統櫃安裝"
+              className="w-full h-auto object-contain"
+            />
+          </div>
+
+          {/* 白色跑動進度光線 */}
+          <div className="w-48 h-1 bg-white/20 rounded-full overflow-hidden relative shadow-inner">
+            <div
+              className="h-full bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.9)]"
+              style={{
+                width: '45%',
+                animation: 'runningLine 1.4s infinite ease-in-out',
+              }}
+            />
+          </div>
+
+          {/* 白色細緻轉圈圈與同步文字 */}
+          <div className="flex items-center gap-2 text-xs text-white/70 tracking-widest font-light pt-1">
+            <div className="w-3.5 h-3.5 border-2 border-white/25 border-t-white rounded-full animate-spin" />
+            <span>雲端資料同步中...</span>
+          </div>
+
+          <style>{`
+            @keyframes runningLine {
+              0% { transform: translateX(-120%); }
+              50% { transform: translateX(80%); }
+              100% { transform: translateX(250%); }
+            }
+          `}</style>
         </div>
       </div>
     );
