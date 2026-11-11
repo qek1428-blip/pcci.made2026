@@ -1,664 +1,174 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Employee, PunchRecord } from '../types';
-import {
-  Clock,
-  MapPin,
-  CheckCircle2,
-  Calendar,
-  AlertCircle,
-  FileText,
-  Shield,
-  Edit2,
-  Trash2,
-  Plus,
-  Check,
-  X,
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Employee, PunchRecord, BonusRecord } from '../types';
+import { Clock, MapPin, CheckCircle2, ChevronRight, Coins } from 'lucide-react';
 import { playPunchSound } from '../utils/sound';
 
 interface PunchClockProps {
   currentEmployee: Employee;
   todayRecord?: PunchRecord;
-  records?: PunchRecord[];
-  onPunchIn: (siteName: string, notes: string, locationStr?: string) => Promise<void>;
+  records: PunchRecord[];
+  bonuses?: BonusRecord[];
+  onPunchIn: (siteName: string, notes: string) => Promise<void>;
   onPunchOut: (notes?: string) => Promise<void>;
   isAdmin: boolean;
   onOpenSwitchUser: () => void;
-  onEditRecord?: (record: PunchRecord) => void;
+  onEditRecord: (record: PunchRecord) => void;
 }
-
-// Helper to extract unique sites from records within the last 14 days
-const getRecentSitesFromRecords = (recordsList?: PunchRecord[]): string[] => {
-  if (!recordsList || recordsList.length === 0) return [''];
-  const now = new Date();
-  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-  const fourteenDaysAgoStr = fourteenDaysAgo.toISOString().split('T')[0];
-
-  const recent = recordsList
-    .filter((r) => r.date >= fourteenDaysAgoStr && r.siteName?.trim())
-    .map((r) => r.siteName.trim());
-
-  const unique = Array.from(new Set(recent));
-  return unique.length > 0 ? unique : [''];
-};
 
 export const PunchClock: React.FC<PunchClockProps> = ({
   currentEmployee,
   todayRecord,
-  records = [],
+  records,
+  bonuses = [],
   onPunchIn,
   onPunchOut,
   isAdmin,
   onOpenSwitchUser,
-  onEditRecord,
 }) => {
-  const [time, setTime] = useState(new Date());
-
-  // Dynamic sites management (persisted in localStorage + recent 2 weeks auto-retained)
-  const [sites, setSites] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('bobb_construction_sites');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      // fallback
-    }
-    return getRecentSitesFromRecords(records);
-  });
-
-  const recentTwoWeeksSet = useMemo(() => {
-    return new Set(getRecentSitesFromRecords(records));
-  }, [records]);
-
-  // Sync sites with recent 2 weeks on first records load
-  useEffect(() => {
-    if (records && records.length > 0) {
-      setSites((prev) => {
-        const recentSites = getRecentSitesFromRecords(records);
-        const merged = Array.from(new Set([...prev, ...recentSites]));
-        if (merged.length !== prev.length) {
-          try {
-            localStorage.setItem('bobb_construction_sites', JSON.stringify(merged));
-          } catch {
-            // ignore
-          }
-          return merged;
-        }
-        return prev;
-      });
-    }
-  }, [records]);
-
-  const saveSites = (newSites: string[]) => {
-    setSites(newSites);
-    try {
-      localStorage.setItem('bobb_construction_sites', JSON.stringify(newSites));
-    } catch {
-      // ignore
-    }
-  };
-
-  const [selectedSite, setSelectedSite] = useState(
-    todayRecord?.siteName || sites[0] || ''
-  );
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editingValue, setEditingValue] = useState('');
-  const [isAddingSite, setIsAddingSite] = useState(false);
-  const [newSiteValue, setNewSiteValue] = useState('');
-  const [punchNotes, setPunchNotes] = useState('');
-  const [isLocating, setIsLocating] = useState(false);
-  const [locationText, setLocationText] = useState(
-    todayRecord?.location?.address || '施工位置'
-  );
+  const [siteName, setSiteName] = useState('');
+  const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Live Clock Tick
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Sync site if today's record exists
-  useEffect(() => {
-    if (todayRecord?.siteName) {
-      setSelectedSite(todayRecord.siteName);
-    }
-  }, [todayRecord]);
-
-  const timeString = time.toLocaleTimeString('zh-TW', {
+  const timeString = currentTime.toLocaleTimeString('zh-TW', {
     hour12: false,
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
   });
 
-  const dateString = time.toLocaleDateString('zh-TW', {
+  const dateString = currentTime.toLocaleDateString('zh-TW', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     weekday: 'long',
   });
 
-  // GPS Location fetcher
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationText('瀏覽器不支援 GPS');
-      return;
-    }
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude.toFixed(4);
-        const lng = pos.coords.longitude.toFixed(4);
-        setLocationText(`GPS 定位 (${lat}, ${lng}) - 案場打卡`);
-        setIsLocating(false);
-      },
-      () => {
-        // Fallback default
-        setLocationText('現場打卡（施工區域內）');
-        setIsLocating(false);
-      },
-      { timeout: 5000 }
-    );
-  };
+  const isClockedIn = Boolean(todayRecord && todayRecord.clockInTime);
+  const isClockedOut = Boolean(todayRecord && todayRecord.clockOutTime);
 
-  const handleClockInAction = async () => {
+  // 計算當月出勤工資
+  const currentMonthPrefix = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const empMonthRecords = records.filter(
+    (r) => r.employeeId === currentEmployee.id && r.date.startsWith(currentMonthPrefix)
+  );
+
+  const monthWorkWage = empMonthRecords.reduce((sum, r) => sum + (Number(r.calculatedWage) || 0), 0);
+
+  // 計算當月加給總額 (員工無須打卡即可自動加總)
+  const empMonthBonuses = bonuses.filter(
+    (b) => b.employeeId === currentEmployee.id && b.date.startsWith(currentMonthPrefix)
+  );
+
+  const monthBonusTotal = empMonthBonuses.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+  const monthTotalSalary = monthWorkWage + monthBonusTotal;
+
+  const handlePunchInClick = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await onPunchIn(selectedSite, punchNotes, locationText);
       playPunchSound('in');
-      setSuccessToast(`【上班打卡完成】${currentEmployee.name} 已於 ${timeString} 打上班卡！`);
-      setTimeout(() => setSuccessToast(null), 4000);
+      await onPunchIn(siteName, notes);
+      setSiteName('');
+      setNotes('');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleClockOutAction = async () => {
+  const handlePunchOutClick = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await onPunchOut(punchNotes);
       playPunchSound('out');
-      setSuccessToast(`【下班打卡完成】${currentEmployee.name} 今日工時已儲存至雲端表單！`);
-      setTimeout(() => setSuccessToast(null), 4000);
+      await onPunchOut(notes);
+      setNotes('');
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  // Determine attendance status
-  const isPunchedIn = Boolean(todayRecord);
-  const isPunchedOut = Boolean(todayRecord?.clockOutTime);
-
-  // Compute live elapsed time if clocked in and not clocked out
-  let elapsedMinutes = 0;
-  if (isPunchedIn && !isPunchedOut && todayRecord?.clockInTime) {
-    const [inH, inM] = todayRecord.clockInTime.split(':').map(Number);
-    const nowH = time.getHours();
-    const nowM = time.getMinutes();
-    elapsedMinutes = Math.max(0, (nowH - inH) * 60 + (nowM - inM));
-  }
-  const elapsedHoursText = `${Math.floor(elapsedMinutes / 60)} 小時 ${elapsedMinutes % 60} 分鐘`;
 
   return (
-    <div className="space-y-6">
-      {/* Toast feedback */}
-      {successToast && (
-        <div className="p-4 rounded-xl bg-taupe-500 text-white shadow-lg flex items-center gap-3 animate-fade-in">
-          <CheckCircle2 className="w-6 h-6 shrink-0" />
-          <div className="font-semibold text-sm sm:text-base">{successToast}</div>
-        </div>
-      )}
-
-      {/* Main Digital Clock Card (Black background, responsive date, no watermark) */}
-      <div className="bg-black text-white rounded-3xl p-5 sm:p-7 shadow-xl border border-neutral-800 relative overflow-hidden">
-        <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6">
-          <div className="flex items-center gap-1.5 text-taupe-300 min-w-0">
-            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-taupe-400 shrink-0" />
-            <span className="text-xs sm:text-sm font-semibold tracking-wide text-white truncate">
-              {dateString}
-            </span>
-          </div>
-
-          <div className="flex items-center shrink-0">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/10 text-taupe-200 border border-white/10 whitespace-nowrap">
-              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-taupe-400 animate-pulse" />
-              雲端打卡機連線中
-            </span>
-          </div>
-        </div>
-
-        {/* Big Live Digital Clock Display */}
-        <div className="text-center py-3 sm:py-5">
-          <div className="text-5xl xs:text-6xl sm:text-7xl font-mono font-bold tracking-tight text-white tabular-nums drop-shadow-md">
+    <div className="max-w-xl mx-auto space-y-4">
+      {/* 打卡主卡片 */}
+      <div className="bg-white rounded-3xl border border-[#E6E1D8] p-6 shadow-xs text-center space-y-5">
+        <div>
+          <div className="text-xs text-[#706458] font-medium">{dateString}</div>
+          <div className="text-4xl sm:text-5xl font-mono font-black text-[#2B2521] tracking-wider my-2">
             {timeString}
           </div>
-          <p className="text-[11px] sm:text-xs text-taupe-400 mt-2">
-            領日薪制 · 實際打卡時間作為每日工數與工資依據
-          </p>
-        </div>
-
-        {/* Current Employee Profile Pill without thumbnail */}
-        <div className="mt-4 pt-4 border-t border-taupe-700/60 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-white text-base sm:text-lg">
-                {currentEmployee.name}
-              </span>
-              {isAdmin ? (
-                <span className="text-[11px] font-bold text-taupe-300 bg-taupe-950/80 border border-taupe-600/50 px-2 py-0.5 rounded-md">
-                  管理人
-                </span>
-              ) : (
-                <span className="text-xs font-medium text-taupe-300 bg-taupe-700/60 px-2 py-0.5 rounded-md">
-                  {currentEmployee.workType}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-taupe-300/90 font-mono mt-0.5">
-              日薪標準：NT$ {currentEmployee.dailyRate.toLocaleString()} / 天
-            </p>
-          </div>
-
-          <button
-            onClick={onOpenSwitchUser}
-            className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
-          >
-            換人打卡 ⇄
-          </button>
-        </div>
-      </div>
-
-      {/* Today Punch Status Banner */}
-      <div className="bg-white rounded-2xl p-5 border border-taupe-200 shadow-xs">
-        <h3 className="text-sm font-bold text-taupe-900 mb-3 flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-taupe-600" />
-            出勤狀態
-          </span>
-          {isPunchedOut ? (
-            <span className="text-xs font-semibold text-taupe-700 bg-taupe-50 px-2.5 py-1 rounded-full border border-taupe-200">
-              ✓ 今日已完成下班打卡
-            </span>
-          ) : isPunchedIn ? (
-            <span className="text-xs font-semibold text-taupe-700 bg-taupe-50 px-2.5 py-1 rounded-full border border-taupe-200 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-taupe-500 animate-ping" />
-              施工中 · 累計 {elapsedHoursText}
-            </span>
-          ) : (
-            <span className="text-xs font-medium text-taupe-500 bg-taupe-100 px-2.5 py-1 rounded-full">
-              尚未打上班卡
-            </span>
-          )}
-        </h3>
-
-        {/* Detailed Times Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-3 rounded-xl bg-taupe-50 border border-taupe-100">
-            <div className="text-xs text-taupe-500">上班打卡</div>
-            <div className="text-lg font-mono font-bold text-taupe-900 mt-1">
-              {todayRecord?.clockInTime || '--:--:--'}
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-taupe-50 border border-taupe-100">
-            <div className="text-xs text-taupe-500">下班打卡</div>
-            <div className="text-lg font-mono font-bold text-taupe-900 mt-1">
-              {todayRecord?.clockOutTime || '--:--:--'}
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-taupe-50 border border-taupe-100">
-            <div className="text-xs text-taupe-500">本日工時</div>
-            <div className="text-lg font-mono font-bold text-taupe-600 mt-1">
-              {todayRecord?.durationHours !== undefined
-                ? `${todayRecord.durationHours} 小時`
-                : isPunchedIn
-                ? `${(elapsedMinutes / 60).toFixed(1)} h (進行中)`
-                : '-'}
-            </div>
-          </div>
-
-          <div className="p-3 rounded-xl bg-taupe-50 border border-taupe-100">
-            <div className="text-xs text-taupe-500">預估當日工數薪資</div>
-            <div className="text-lg font-mono font-bold text-taupe-700 mt-1">
-              {todayRecord?.calculatedWage
-                ? `NT$ ${todayRecord.calculatedWage.toLocaleString()}`
-                : isPunchedIn
-                ? `1.0 工 (NT$ ${currentEmployee.dailyRate.toLocaleString()})`
-                : '-'}
-            </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF8F5] border border-[#E6E1D8] text-xs text-[#54473C]">
+            <span>當前出勤人員：</span>
+            <span className="font-bold text-[#2B2521]">{currentEmployee.name}</span>
           </div>
         </div>
 
-        {todayRecord?.modifiedByAdmin && (
-          <div className="mt-3 p-2.5 rounded-lg bg-taupe-50 border border-taupe-200 text-xs text-taupe-800 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-taupe-600" />
-              此筆紀錄由管理員審核修訂
-            </span>
-            {isAdmin && onEditRecord && (
-              <button
-                onClick={() => onEditRecord(todayRecord)}
-                className="text-taupe-900 font-semibold underline text-xs"
-              >
-                再編輯
-              </button>
-            )}
+        {/* 打卡動作區 */}
+        {!isClockedIn ? (
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="今日案場名稱（選填）"
+              value={siteName}
+              onChange={(e) => setSiteName(e.target.value)}
+              className="w-full text-xs sm:text-sm border border-[#E6E1D8] rounded-xl px-4 py-2.5 bg-[#FAF8F5] focus:outline-none focus:ring-2 focus:ring-[#6E5D4F] text-[#2B2521]"
+            />
+            <button
+              onClick={handlePunchInClick}
+              disabled={isSubmitting}
+              className="w-full py-4 rounded-2xl bg-[#2B2521] hover:bg-[#1E1916] text-white font-black text-lg shadow-md hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {isSubmitting ? '打卡同步中...' : '上班打卡'}
+            </button>
+          </div>
+        ) : !isClockedOut ? (
+          <div className="space-y-3">
+            <div className="p-3 bg-[#EAE3DA]/50 rounded-2xl border border-[#D4C9BC] text-xs text-[#4A3D32]">
+              上班時間：<span className="font-mono font-bold">{todayRecord?.clockInTime}</span>
+              {todayRecord?.siteName && <span> · 案場：{todayRecord.siteName}</span>}
+            </div>
+            <button
+              onClick={handlePunchOutClick}
+              disabled={isSubmitting}
+              className="w-full py-4 rounded-2xl bg-[#6E5D4F] hover:bg-[#5C4D40] text-white font-black text-lg shadow-md hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {isSubmitting ? '打卡同步中...' : '下班打卡'}
+            </button>
+          </div>
+        ) : (
+          <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>今日上下班打卡均已順利完成！辛苦了！</span>
           </div>
         )}
       </div>
 
-      {/* Punch Action Control Box */}
-      <div className="bg-white rounded-3xl p-6 border border-taupe-200 shadow-sm space-y-5">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-taupe-900 text-base">施工案場</h3>
-          <span className="text-[11px] text-taupe-400">
-            點選案場打卡 · 支援自訂與編輯
-          </span>
-        </div>
-
-        {/* Site Picker & Management */}
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {sites.map((site, idx) => {
-              const isSelected = selectedSite === site;
-              const isEditing = editingIndex === idx;
-              const isRecent = recentTwoWeeksSet.has(site);
-
-              if (isEditing) {
-                return (
-                  <div
-                    key={`edit-${idx}`}
-                    className="p-2 rounded-xl border-2 border-taupe-400 bg-taupe-50/50 flex items-center gap-2"
-                  >
-                    <input
-                      type="text"
-                      value={editingValue}
-                      onChange={(e) => setEditingValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const trimmed = editingValue.trim();
-                          if (trimmed) {
-                            const updated = [...sites];
-                            const oldName = updated[idx];
-                            updated[idx] = trimmed;
-                            saveSites(updated);
-                            if (selectedSite === oldName) setSelectedSite(trimmed);
-                          }
-                          setEditingIndex(null);
-                        } else if (e.key === 'Escape') {
-                          setEditingIndex(null);
-                        }
-                      }}
-                      autoFocus
-                      className="flex-1 px-2.5 py-1 text-xs bg-white border border-taupe-300 rounded-lg focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const trimmed = editingValue.trim();
-                        if (trimmed) {
-                          const updated = [...sites];
-                          const oldName = updated[idx];
-                          updated[idx] = trimmed;
-                          saveSites(updated);
-                          if (selectedSite === oldName) setSelectedSite(trimmed);
-                        }
-                        setEditingIndex(null);
-                      }}
-                      title="儲存名稱"
-                      className="p-1 rounded-md bg-taupe-600 text-white hover:bg-taupe-700 cursor-pointer"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingIndex(null);
-                      }}
-                      title="取消"
-                      className="p-1 rounded-md bg-taupe-200 text-taupe-600 hover:bg-taupe-300 cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                );
-              }
-
-              return (
-                <div
-                  key={site}
-                  onClick={() => {
-                    if (!isPunchedOut) {
-                      setSelectedSite(site);
-                      playPunchSound('tap');
-                    }
-                  }}
-                  className={`group relative px-3 py-2.5 rounded-xl text-xs font-medium border transition-all flex items-center justify-between cursor-pointer ${
-                    isSelected
-                      ? 'border-taupe-500 bg-taupe-50/90 text-taupe-950 font-bold shadow-xs'
-                      : 'border-taupe-200 hover:border-taupe-300 bg-white text-taupe-700 hover:bg-taupe-50/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 truncate min-w-0 pr-2">
-                    <span className="shrink-0">📍</span>
-                    <span className="truncate">{site}</span>
-                    {isRecent && (
-                      <span className="shrink-0 text-[10px] bg-taupe-100 text-taupe-800 px-1.5 py-0.2 rounded font-normal">
-                        近兩週
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Actions: Edit & Delete */}
-                  <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingIndex(idx);
-                        setEditingValue(site);
-                      }}
-                      title="修改案場名稱"
-                      className="p-1 rounded-md text-taupe-400 hover:text-taupe-600 hover:bg-taupe-100/60 transition-colors cursor-pointer"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (sites.length <= 1) {
-                          alert('至少需保留一個施工案場');
-                          return;
-                        }
-                        const updated = sites.filter((_, i) => i !== idx);
-                        saveSites(updated);
-                        if (selectedSite === site) {
-                          setSelectedSite(updated[0] || '');
-                        }
-                      }}
-                      title="刪除案場"
-                      className="p-1 rounded-md text-taupe-400 hover:text-rose-600 hover:bg-rose-100/60 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+      {/* 當月預估實領薪資卡片 (含自動加總之薪資加給) */}
+      <div className="bg-white rounded-3xl border border-[#E6E1D8] p-5 shadow-xs">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-bold text-[#706458]">
+            當月預估實領薪資 ({new Date().getMonth() + 1} 月)
           </div>
-
-          {/* Add Site Row */}
-          {!isAddingSite ? (
-            <button
-              type="button"
-              onClick={() => setIsAddingSite(true)}
-              className="inline-flex items-center gap-1.5 text-xs text-taupe-600 hover:text-taupe-700 font-bold transition-colors cursor-pointer pt-1"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              新增施工案場
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="text"
-                placeholder="輸入新案場名稱 (如：汐止民生路外牆防水)"
-                value={newSiteValue}
-                onChange={(e) => setNewSiteValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const trimmed = newSiteValue.trim();
-                    if (trimmed) {
-                      if (!sites.includes(trimmed)) {
-                        const updated = [...sites, trimmed];
-                        saveSites(updated);
-                      }
-                      setSelectedSite(trimmed);
-                      setNewSiteValue('');
-                      setIsAddingSite(false);
-                    }
-                  } else if (e.key === 'Escape') {
-                    setIsAddingSite(false);
-                    setNewSiteValue('');
-                  }
-                }}
-                autoFocus
-                className="flex-1 px-3 py-1.5 text-xs border border-taupe-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const trimmed = newSiteValue.trim();
-                  if (trimmed) {
-                    if (!sites.includes(trimmed)) {
-                      const updated = [...sites, trimmed];
-                      saveSites(updated);
-                    }
-                    setSelectedSite(trimmed);
-                    setNewSiteValue('');
-                    setIsAddingSite(false);
-                  }
-                }}
-                className="px-3 py-1.5 text-xs font-bold bg-taupe-600 text-white rounded-xl hover:bg-taupe-700 transition-colors cursor-pointer"
-              >
-                新增
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddingSite(false);
-                  setNewSiteValue('');
-                }}
-                className="px-2.5 py-1.5 text-xs font-semibold text-taupe-500 border border-taupe-200 rounded-xl hover:bg-taupe-50 cursor-pointer"
-              >
-                取消
-              </button>
+          {monthBonusTotal > 0 && (
+            <div className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#EAE3DA] text-[#4A3D32] border border-[#D4C9BC]">
+              <Coins className="w-3 h-3 text-[#6E5D4F]" />
+              <span>含加給 +NT${monthBonusTotal.toLocaleString()}</span>
             </div>
           )}
         </div>
 
-        {/* Location & GPS Info */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-taupe-50 rounded-xl border border-taupe-100 text-xs text-taupe-600">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-taupe-600 shrink-0" />
-            <span className="font-medium text-taupe-700">案場定位：</span>
-            <span>{locationText}</span>
+        <div className="flex items-baseline justify-between">
+          <div className="text-2xl sm:text-3xl font-mono font-black text-[#2B2521]">
+            NT$ {monthTotalSalary.toLocaleString()}
           </div>
-          <button
-            type="button"
-            onClick={handleGetLocation}
-            disabled={isLocating}
-            className="text-taupe-600 hover:text-taupe-700 font-semibold underline text-left sm:text-right"
-          >
-            {isLocating ? '抓取定位中...' : '重新抓取 GPS'}
-          </button>
-        </div>
-
-        {/* Daily Remarks / Work note */}
-        <div>
-          <label className="block text-xs font-semibold text-taupe-700 mb-1">
-            工作備註 (選填，如：今日進材料 / 加班 / 灌漿)
-          </label>
-          <div className="relative">
-            <FileText className="w-4 h-4 text-taupe-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              value={punchNotes}
-              onChange={(e) => setPunchNotes(e.target.value)}
-              placeholder="例如：提早進料、防水塗佈第一道完成"
-              disabled={isPunchedOut}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-taupe-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-taupe-500"
-            />
+          <div className="text-xs text-[#8A7D70]">
+            出勤本薪: NT${monthWorkWage.toLocaleString()}
           </div>
-        </div>
-
-        {/* Large Tactile Punch Buttons */}
-        <div className="pt-2">
-          {!isPunchedIn ? (
-            /* Punch In Button */
-            <button
-              onClick={handleClockInAction}
-              disabled={isSubmitting}
-              className="w-full py-4 sm:py-5 rounded-2xl bg-taupe-600 hover:bg-taupe-700 active:scale-[0.98] text-white font-bold text-xl sm:text-2xl shadow-lg shadow-taupe-600/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
-            >
-              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-white" />
-              </div>
-              <span className="tracking-wider">上班</span>
-            </button>
-          ) : !isPunchedOut ? (
-            /* Punch Out Button */
-            <button
-              onClick={handleClockOutAction}
-              disabled={isSubmitting}
-              className="w-full py-4 sm:py-5 rounded-2xl bg-taupe-900 hover:bg-taupe-800 active:scale-[0.98] text-white font-bold text-xl sm:text-2xl shadow-lg shadow-taupe-900/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
-            >
-              <div className="w-9 h-9 rounded-full bg-taupe-500/20 text-taupe-400 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-taupe-400" />
-              </div>
-              <span className="tracking-wider">下班</span>
-            </button>
-          ) : (
-            /* Completed Banner */
-            <div className="p-4 rounded-2xl bg-taupe-50 border border-taupe-200 text-center">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-taupe-100 text-taupe-700 mb-2">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <h4 className="font-bold text-taupe-900 text-base">
-                今日上下班打卡皆已完成！
-              </h4>
-              <p className="text-xs text-taupe-700 mt-1">
-                打卡紀錄已自動同步存至薄薄工程行雲端表單。
-              </p>
-              {isAdmin && todayRecord && onEditRecord && (
-                <button
-                  onClick={() => onEditRecord(todayRecord)}
-                  className="mt-3 px-4 py-1.5 text-xs font-semibold bg-white text-taupe-800 rounded-lg border border-taupe-300 hover:bg-taupe-50"
-                >
-                  管理員修正此筆打卡
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Construction Notice footer */}
-        <div className="text-xs text-taupe-500 flex items-start gap-2 bg-taupe-50 p-3 rounded-xl border border-taupe-100">
-          <AlertCircle className="w-4 h-4 text-taupe-500 shrink-0 mt-0.5" />
-          <span>
-            <strong>出勤規範說明：</strong> 本工程行師傅及員工採日薪制核算。員工本人僅可打上班與下班卡，無法自行修改歷史打卡紀錄；如有遺漏或時間需修正，請於次日前向管理員回報進行系統補登。
-          </span>
         </div>
       </div>
     </div>
