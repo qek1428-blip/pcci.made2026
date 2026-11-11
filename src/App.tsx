@@ -25,42 +25,66 @@ export default function App() {
   const [manualDate, setManualDate] = useState<string | undefined>();
   const [manualEmployeeId, setManualEmployeeId] = useState<string | undefined>();
 
-  // Fetch initial state from Express backend
+  // Fetch initial state (修正版：完美支援無後端的 GitHub Pages)
   const fetchState = async () => {
     try {
       const res = await fetch('/api/state');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          const data: CompanyState = json.data;
-          setEmployees(data.employees);
-          setRecords(data.records);
-          if (data.settings?.adminPin) {
-            setAdminPin(data.settings.adminPin);
-          }
-
-          // Set default user if not selected
-          if (!currentEmployee) {
-            // Default to first worker or admin
-            const firstWorker = data.employees.find((e) => e.role === 'worker') || data.employees[0];
-            setCurrentEmployee(firstWorker);
-            setIsAdmin(firstWorker.role === 'admin');
-          }
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        const data: CompanyState = json.data;
+        setEmployees(data.employees);
+        setRecords(data.records);
+        if (data.settings?.adminPin) {
+          setAdminPin(data.settings.adminPin);
         }
+        if (!currentEmployee) {
+          const firstWorker = data.employees.find((e) => e.role === 'worker') || data.employees[0];
+          setCurrentEmployee(firstWorker);
+          setIsAdmin(firstWorker.role === 'admin');
+        }
+        return; // 成功讀取後端資料就結束
       }
     } catch (err) {
-      console.warn('API fetch failed, checking localStorage cache', err);
-      // Fallback local storage
-      const cached = localStorage.getItem('bobo_state');
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          setEmployees(parsed.employees || []);
-          setRecords(parsed.records || []);
-        } catch {
-          // ignore
-        }
+      console.warn('無法連線到雲端伺服器，改用瀏覽器本機儲存模式 (LocalStorage)');
+    }
+
+    // --- 以下是本機模式 (GitHub Pages) 的備用方案 ---
+    const cached = localStorage.getItem('bobo_state');
+    let loadedEmployees: Employee[] = [];
+
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        loadedEmployees = parsed.employees || [];
+        setRecords(parsed.records || []);
+        if (parsed.adminPin) setAdminPin(parsed.adminPin);
+      } catch {
+        // 解析失敗忽略
       }
+    }
+
+    // 如果是第一次打開網頁，沒有任何員工資料，預設建立老闆帳號以防卡轉圈
+    if (loadedEmployees.length === 0) {
+      const defaultAdmin: Employee = {
+        id: 'admin-001',
+        name: '薄老闆',
+        dailyRate: 3000,
+        role: 'admin',
+        workType: '管理員',
+        phone: '',
+        avatarColor: 'bg-amber-600',
+        active: true,
+      };
+      loadedEmployees = [defaultAdmin];
+    }
+
+    setEmployees(loadedEmployees);
+
+    // 設定當前操作的使用者
+    if (!currentEmployee) {
+      const firstWorker = loadedEmployees.find((e) => e.role === 'worker') || loadedEmployees[0];
+      setCurrentEmployee(firstWorker);
+      setIsAdmin(firstWorker.role === 'admin');
     }
   };
 
@@ -106,15 +130,12 @@ export default function App() {
           source: 'mobile_web',
         }),
       });
-
+      if (!res.ok) throw new Error('強制進入本機模式');
       const resData = await res.json();
-      if (res.ok && resData.success) {
+      if (resData.success) {
         setRecords((prev) => [resData.record, ...prev.filter((r) => r.id !== resData.record.id)]);
-      } else {
-        alert(resData.error || '打卡失敗，請重試');
       }
     } catch (err) {
-      console.error('Punch in error:', err);
       // Offline fallback
       const offlineRecord: PunchRecord = {
         id: `rec-${todayStr}-${currentEmployee.id}`,
@@ -151,17 +172,14 @@ export default function App() {
           notes,
         }),
       });
-
+      if (!res.ok) throw new Error('強制進入本機模式');
       const resData = await res.json();
-      if (res.ok && resData.success) {
+      if (resData.success) {
         setRecords((prev) =>
           prev.map((r) => (r.id === resData.record.id ? resData.record : r))
         );
-      } else {
-        alert(resData.error || '下班打卡失敗');
       }
     } catch (err) {
-      console.error('Punch out error:', err);
       setRecords((prev) =>
         prev.map((r) => {
           if (r.employeeId === currentEmployee.id && r.date === todayStr) {
@@ -180,41 +198,35 @@ export default function App() {
     }
   };
 
-  // 3. Admin Save Record (Update existing or create manual)
+  // 3. Admin Save Record
   const handleSaveRecord = async (data: Partial<PunchRecord>) => {
     try {
       if (data.id) {
-        // Update existing
         const res = await fetch(`/api/records/${data.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
+        if (!res.ok) throw new Error('強制進入本機模式');
         const resData = await res.json();
-        if (res.ok && resData.success) {
-          setRecords((prev) =>
-            prev.map((r) => (r.id === data.id ? resData.record : r))
-          );
+        if (resData.success) {
+          setRecords((prev) => prev.map((r) => (r.id === data.id ? resData.record : r)));
         }
       } else {
-        // Create manual
         const res = await fetch('/api/records/manual', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
+        if (!res.ok) throw new Error('強制進入本機模式');
         const resData = await res.json();
-        if (res.ok && resData.success) {
+        if (resData.success) {
           setRecords((prev) => [resData.record, ...prev]);
         }
       }
     } catch (err) {
-      console.error('Save record error:', err);
-      // Local state fallback
       if (data.id) {
-        setRecords((prev) =>
-          prev.map((r) => (r.id === data.id ? ({ ...r, ...data } as PunchRecord) : r))
-        );
+        setRecords((prev) => prev.map((r) => (r.id === data.id ? ({ ...r, ...data } as PunchRecord) : r)));
       } else {
         const fakeId = `rec-manual-${Date.now()}`;
         setRecords((prev) => [{ ...data, id: fakeId } as PunchRecord, ...prev]);
@@ -226,9 +238,8 @@ export default function App() {
   const handleDeleteRecord = async (recordId: string) => {
     try {
       const res = await fetch(`/api/records/${recordId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setRecords((prev) => prev.filter((r) => r.id !== recordId));
-      }
+      if (!res.ok) throw new Error('強制進入本機模式');
+      setRecords((prev) => prev.filter((r) => r.id !== recordId));
     } catch {
       setRecords((prev) => prev.filter((r) => r.id !== recordId));
     }
@@ -242,12 +253,12 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(empData),
       });
+      if (!res.ok) throw new Error('強制進入本機模式');
       const resData = await res.json();
-      if (res.ok && resData.success) {
+      if (resData.success) {
         setEmployees((prev) => [...prev, resData.employee]);
       }
     } catch {
-      // Local fallback
       const fakeId = `emp-${Date.now()}`;
       setEmployees((prev) => [
         ...prev,
@@ -273,19 +284,14 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(empData),
       });
+      if (!res.ok) throw new Error('強制進入本機模式');
       const resData = await res.json();
-      if (res.ok && resData.success) {
-        setEmployees((prev) =>
-          prev.map((e) => (e.id === id ? resData.employee : e))
-        );
-        if (currentEmployee?.id === id) {
-          setCurrentEmployee(resData.employee);
-        }
+      if (resData.success) {
+        setEmployees((prev) => prev.map((e) => (e.id === id ? resData.employee : e)));
+        if (currentEmployee?.id === id) setCurrentEmployee(resData.employee);
       }
     } catch {
-      setEmployees((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, ...empData } : e))
-      );
+      setEmployees((prev) => prev.map((e) => (e.id === id ? { ...e, ...empData } : e)));
       if (currentEmployee?.id === id) {
         setCurrentEmployee((prev) => (prev ? { ...prev, ...empData } : null));
       }
@@ -296,18 +302,13 @@ export default function App() {
   const handleDeleteEmployee = async (id: string) => {
     try {
       const res = await fetch(`/api/employees/${id}`, { method: 'DELETE' });
-      const resData = await res.json();
-      if (res.ok && resData.success) {
-        setEmployees((prev) => prev.filter((e) => e.id !== id));
-      } else {
-        alert(resData.error || '刪除失敗');
-      }
+      if (!res.ok) throw new Error('強制進入本機模式');
+      setEmployees((prev) => prev.filter((e) => e.id !== id));
     } catch {
       setEmployees((prev) => prev.filter((e) => e.id !== id));
     }
   };
 
-  // Open Edit Modal for a specific record
   const handleOpenEditRecord = (record: PunchRecord) => {
     if (!isAdmin) {
       alert('⚠️ 權限提醒：現場員工僅能查看紀錄，無法修改。需由管理人 (薄老闆) 執行修正。');
@@ -319,7 +320,6 @@ export default function App() {
     setIsEditModalOpen(true);
   };
 
-  // Open Manual Add Modal for a specific date
   const handleOpenManualPunch = (dateStr: string, empId?: string) => {
     if (!isAdmin) {
       alert('⚠️ 需管理人權限才可進行手動補登。');
@@ -331,7 +331,6 @@ export default function App() {
     setIsEditModalOpen(true);
   };
 
-  // Handle Switch User / Role
   const handleSelectUser = (emp: Employee, isUnlockedAdmin: boolean) => {
     setCurrentEmployee(emp);
     setIsAdmin(isUnlockedAdmin || emp.role === 'admin');
@@ -351,7 +350,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col antialiased text-slate-900 pb-20 sm:pb-8">
-      {/* Top Header */}
       <Header
         currentEmployee={currentEmployee}
         employees={employees}
@@ -360,64 +358,39 @@ export default function App() {
         onToggleAdmin={() => setIsUserSwitchOpen(true)}
       />
 
-      {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6">
-        {/* Desktop Navigation Segmented Control */}
         <div className="hidden sm:flex items-center gap-1.5 p-1.5 bg-slate-200/80 rounded-2xl mb-6 max-w-xl mx-auto shadow-inner">
           <button
-            onClick={() => {
-              playPunchSound('tap');
-              setActiveTab('punch');
-            }}
+            onClick={() => { playPunchSound('tap'); setActiveTab('punch'); }}
             className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'punch'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+              activeTab === 'punch' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Clock className="w-4 h-4 text-orange-600" />
             <span>打卡鐘</span>
           </button>
-
           <button
-            onClick={() => {
-              playPunchSound('tap');
-              setActiveTab('calendar');
-            }}
+            onClick={() => { playPunchSound('tap'); setActiveTab('calendar'); }}
             className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'calendar'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+              activeTab === 'calendar' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Calendar className="w-4 h-4 text-blue-600" />
             <span>打卡日曆</span>
           </button>
-
           <button
-            onClick={() => {
-              playPunchSound('tap');
-              setActiveTab('sheet');
-            }}
+            onClick={() => { playPunchSound('tap'); setActiveTab('sheet'); }}
             className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'sheet'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+              activeTab === 'sheet' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
             <span>雲端表單</span>
           </button>
-
           <button
-            onClick={() => {
-              playPunchSound('tap');
-              setActiveTab('admin');
-            }}
+            onClick={() => { playPunchSound('tap'); setActiveTab('admin'); }}
             className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'admin'
-                ? 'bg-white text-amber-800 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+              activeTab === 'admin' ? 'bg-white text-amber-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Shield className="w-4 h-4 text-amber-600" />
@@ -425,7 +398,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Tab 1: Punch Clock */}
         {activeTab === 'punch' && (
           <PunchClock
             currentEmployee={currentEmployee}
@@ -438,8 +410,6 @@ export default function App() {
             onEditRecord={handleOpenEditRecord}
           />
         )}
-
-        {/* Tab 2: Monthly Calendar */}
         {activeTab === 'calendar' && (
           <CalendarView
             records={records}
@@ -450,8 +420,6 @@ export default function App() {
             onAddManualPunch={handleOpenManualPunch}
           />
         )}
-
-        {/* Tab 3: Cloud Spreadsheet View */}
         {activeTab === 'sheet' && (
           <CloudSheetView
             records={records}
@@ -460,8 +428,6 @@ export default function App() {
             onEditRecord={handleOpenEditRecord}
           />
         )}
-
-        {/* Tab 4: Admin Panel */}
         {activeTab === 'admin' && (
           <AdminPanel
             isAdmin={isAdmin}
@@ -477,14 +443,10 @@ export default function App() {
         )}
       </main>
 
-      {/* Mobile Fixed Bottom Tab Bar (iOS / Android thumb ergonomics) */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 pb-safe">
         <div className="grid grid-cols-4 h-16 items-center">
           <button
-            onClick={() => {
-              playPunchSound('tap');
-              setActiveTab('punch');
-            }}
+            onClick={() => { playPunchSound('tap'); setActiveTab('punch'); }}
             className={`flex flex-col items-center justify-center h-full transition-colors ${
               activeTab === 'punch' ? 'text-orange-600' : 'text-slate-400'
             }`}
@@ -492,12 +454,8 @@ export default function App() {
             <Clock className="w-5 h-5" />
             <span className="text-[10px] font-bold mt-1">打卡鐘</span>
           </button>
-
           <button
-            onClick={() => {
-              playPunchSound('tap');
-              setActiveTab('calendar');
-            }}
+            onClick={() => { playPunchSound('tap'); setActiveTab('calendar'); }}
             className={`flex flex-col items-center justify-center h-full transition-colors ${
               activeTab === 'calendar' ? 'text-blue-600' : 'text-slate-400'
             }`}
@@ -505,12 +463,8 @@ export default function App() {
             <Calendar className="w-5 h-5" />
             <span className="text-[10px] font-bold mt-1">打卡日曆</span>
           </button>
-
           <button
-            onClick={() => {
-              playPunchSound('tap');
-              setActiveTab('sheet');
-            }}
+            onClick={() => { playPunchSound('tap'); setActiveTab('sheet'); }}
             className={`flex flex-col items-center justify-center h-full transition-colors ${
               activeTab === 'sheet' ? 'text-emerald-600' : 'text-slate-400'
             }`}
@@ -518,12 +472,8 @@ export default function App() {
             <FileSpreadsheet className="w-5 h-5" />
             <span className="text-[10px] font-bold mt-1">雲端表單</span>
           </button>
-
           <button
-            onClick={() => {
-              playPunchSound('tap');
-              setActiveTab('admin');
-            }}
+            onClick={() => { playPunchSound('tap'); setActiveTab('admin'); }}
             className={`flex flex-col items-center justify-center h-full transition-colors ${
               activeTab === 'admin' ? 'text-amber-600' : 'text-slate-400'
             }`}
@@ -534,7 +484,6 @@ export default function App() {
         </div>
       </nav>
 
-      {/* User Switch Modal */}
       <UserSwitchModal
         isOpen={isUserSwitchOpen}
         onClose={() => setIsUserSwitchOpen(false)}
@@ -544,8 +493,6 @@ export default function App() {
         onSelectUser={handleSelectUser}
         adminPin={adminPin}
       />
-
-      {/* Edit / Manual Punch Record Modal */}
       <EditRecordModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
