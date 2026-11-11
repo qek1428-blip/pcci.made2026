@@ -76,14 +76,14 @@ export const UserSwitchModal: React.FC<UserSwitchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-taupe-900/60 backdrop-blur-xs">
+      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-taupe-200">
+        <div className="px-5 py-4 border-b border-taupe-100 flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-slate-900 text-lg">
+            <h3 className="font-bold text-taupe-900 text-lg">
               {selectedEmp?.role === 'admin' ? '管理員身分驗證' : '選擇打卡人員 / 管理人'}
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-taupe-500 mt-0.5">
               {selectedEmp?.role === 'admin'
                 ? '請輸入管理員 4 位數密碼以解鎖修改與管理權限'
                 : '請點選您的姓名以進行上下班打卡或查看紀錄'}
@@ -91,7 +91,7 @@ export const UserSwitchModal: React.FC<UserSwitchModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-taupe-400 hover:text-taupe-600 hover:bg-taupe-100"
           >
             <X className="w-5 h-5" />
           </button>
@@ -101,13 +101,13 @@ export const UserSwitchModal: React.FC<UserSwitchModalProps> = ({
           /* PIN Verification View */
           <div className="p-6">
             <div className="flex flex-col items-center justify-center mb-6">
-              <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mb-3">
+              <div className="w-14 h-14 rounded-full bg-taupe-100 text-taupe-700 flex items-center justify-center mb-3">
                 <Shield className="w-7 h-7" />
               </div>
-              <h4 className="font-bold text-slate-800 text-base">
+              <h4 className="font-bold text-taupe-800 text-base">
                 {selectedEmp.name} (負責人 / 管理人)
               </h4>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-taupe-500 mt-1">
                 解鎖後可：修改全員打卡時間、補發工數、下載報表
               </p>
             </div>
@@ -119,8 +119,8 @@ export const UserSwitchModal: React.FC<UserSwitchModalProps> = ({
                   key={idx}
                   className={`w-4 h-4 rounded-full border-2 transition-all ${
                     pinInput.length > idx
-                      ? 'bg-amber-600 border-amber-600 scale-110'
-                      : 'bg-slate-100 border-slate-300'
+                      ? 'bg-taupe-600 border-taupe-600 scale-110'
+                      : 'bg-taupe-100 border-taupe-300'
                   }`}
                 />
               ))}
@@ -150,10 +150,10 @@ export const UserSwitchModal: React.FC<UserSwitchModalProps> = ({
                     }}
                     className={`h-12 rounded-xl text-base font-semibold flex items-center justify-center transition-all active:scale-95 ${
                       btn === '確認'
-                        ? 'bg-amber-600 text-white font-bold'
+                        ? 'bg-taupe-600 text-white font-bold'
                         : btn === '清除'
-                        ? 'bg-slate-100 text-slate-600 text-xs'
-                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200'
+                        ? 'bg-taupe-100 text-taupe-600 text-xs'
+                        : 'bg-taupe-50 hover:bg-taupe-100 text-taupe-800 border border-taupe-200'
                     }`}
                   >
                     {btn}
@@ -165,7 +165,7 @@ export const UserSwitchModal: React.FC<UserSwitchModalProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={() => setSelectedEmp(null)}
-                className="w-full py-2.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50"
+                className="w-full py-2.5 text-xs font-semibold text-taupe-600 border border-taupe-200 rounded-xl hover:bg-taupe-50"
               >
                 返回成員列表
               </button>
@@ -174,7 +174,7 @@ export const UserSwitchModal: React.FC<UserSwitchModalProps> = ({
         ) : (
           /* Employee Selection List */
           <div className="p-4 max-h-[65vh] overflow-y-auto space-y-2">
-            <div className="text-xs font-semibold text-slate-400 px-2 py-1">
+            <div className="text-xs font-semibold text-taupe-400 px-2 py-1">
               管理身分
             </div>
             {employees
@@ -187,28 +187,28 @@ export const UserSwitchModal: React.FC<UserSwitchModalProps> = ({
                     onClick={() => handlePick(emp)}
                     className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all text-left ${
                       isCurrent
-                        ? 'border-amber-500 bg-amber-50/70'
-                        : 'border-slate-200 hover:border-amber-300 hover:bg-amber-50/30'
+                        ? 'border-taupe-500 bg-taupe-50/70'
+                        : 'border-taupe-200 hover:border-taupe-300 hover:bg-taupe-50/30'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-base">
+                      <span className="font-bold text-taupe-900 text-base">
                         {emp.name}
                       </span>
-                      <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+                      <span className="text-xs font-bold text-taupe-700 bg-taupe-100 px-2 py-0.5 rounded">
                         管理人
                       </span>
                     </div>
                     {isCurrent ? (
-                      <Check className="w-5 h-5 text-amber-600" />
+                      <Check className="w-5 h-5 text-taupe-600" />
                     ) : (
-                      <Lock className="w-4 h-4 text-slate-400" />
+                      <Lock className="w-4 h-4 text-taupe-400" />
                     )}
                   </button>
                 );
               })}
 
-            <div className="text-xs font-semibold text-slate-400 px-2 pt-3 pb-1">
+            <div className="text-xs font-semibold text-taupe-400 px-2 pt-3 pb-1">
               員工身分 (打卡與查看)
             </div>
             {employees
@@ -222,21 +222,21 @@ export const UserSwitchModal: React.FC<UserSwitchModalProps> = ({
                     className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all text-left ${
                       isCurrent
                         ? 'border-blue-600 bg-blue-50/70'
-                        : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+                        : 'border-taupe-200 hover:border-blue-300 hover:bg-taupe-50'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-base">
+                      <span className="font-bold text-taupe-900 text-base">
                         {emp.name}
                       </span>
-                      <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                      <span className="text-xs font-medium text-taupe-600 bg-taupe-100 px-2 py-0.5 rounded">
                         員工
                       </span>
                     </div>
                     {isCurrent ? (
                       <Check className="w-5 h-5 text-blue-600" />
                     ) : (
-                      <span className="text-xs font-medium text-slate-400">選擇</span>
+                      <span className="text-xs font-medium text-taupe-400">選擇</span>
                     )}
                   </button>
                 );
