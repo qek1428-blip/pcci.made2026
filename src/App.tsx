@@ -6,7 +6,7 @@ import { CloudSheetView } from './components/CloudSheetView';
 import { AdminPanel } from './components/AdminPanel';
 import { EditRecordModal, calculateWorkStats } from './components/EditRecordModal';
 import { Employee, PunchRecord, CompanyState } from './types';
-import { Clock, Calendar, FileSpreadsheet, Shield, KeyRound, MessageSquareWarning, X, Check, Lock, RefreshCw, Send } from 'lucide-react';
+import { Clock, Calendar, FileSpreadsheet, Shield, KeyRound, MessageSquareWarning, X, Check, Lock, RefreshCw, Send, Delete, Crown } from 'lucide-react';
 import { playPunchSound } from './utils/sound';
 
 import splashImg from './assets/images/splash.jpg';
@@ -58,7 +58,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState<'punch' | 'calendar' | 'sheet' | 'admin'>('punch');
 
-  // Modals 狀態
+  // 補登編輯彈窗
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PunchRecord | null>(null);
   const [manualDate, setManualDate] = useState<string | undefined>();
@@ -70,13 +70,19 @@ export default function App() {
   const [inputPin, setInputPin] = useState('');
   const [pinError, setPinError] = useState('');
 
-  // 修改密碼彈窗
+  // 修改個人密碼彈窗 (員工/個人)
   const [isChangePinOpen, setIsChangePinOpen] = useState(false);
+  const [activePinField, setActivePinField] = useState<'old' | 'new' | 'confirm'>('old');
   const [oldPin, setOldPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmNewPin, setConfirmNewPin] = useState('');
   const [changePinError, setChangePinError] = useState('');
   const [changePinSuccess, setChangePinSuccess] = useState(false);
+
+  // 管理員專屬修改密碼彈窗
+  const [isAdminChangePinOpen, setIsAdminChangePinOpen] = useState(false);
+  const [adminNewPin, setAdminNewPin] = useState('');
+  const [adminPinSuccess, setAdminPinSuccess] = useState(false);
 
   // 問題回報彈窗
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -301,11 +307,10 @@ export default function App() {
     await sendToGoogleSheet({ action: 'deleteEmployee', id });
   };
 
-  // 驗證 PIN 碼切換人員（防代打防按錯）
+  // 驗證 PIN 碼切換人員
   const handleConfirmSwitchWithPin = () => {
     if (!selectedTargetUser) return;
 
-    // 若已經是管理員且登入中，擁有最高權限可直接免密碼切換任意員工
     if (isAdmin && selectedTargetUser.role !== 'admin') {
       setCurrentEmployee(selectedTargetUser);
       setIsUserSwitchOpen(false);
@@ -330,6 +335,30 @@ export default function App() {
     }
   };
 
+  // 管理員專屬：修改管理員 (吳昱勳) PIN 碼
+  const handleAdminChangePinConfirm = async () => {
+    if (adminNewPin.length < 4) {
+      alert('管理員 PIN 碼至少需 4 位數！');
+      return;
+    }
+    const boss = employees.find((e) => e.role === 'admin' || e.name === '吳昱勳');
+    setAdminPin(adminNewPin);
+    if (boss) {
+      setEmployees((prev) =>
+        prev.map((e) => (e.id === boss.id ? { ...e, pin: adminNewPin } as any : e))
+      );
+      await sendToGoogleSheet({ action: 'updatePin', employeeId: boss.id, pin: adminNewPin });
+    }
+    await sendToGoogleSheet({ action: 'updateAdminPin', newPin: adminNewPin });
+
+    setAdminPinSuccess(true);
+    setTimeout(() => {
+      setIsAdminChangePinOpen(false);
+      setAdminPinSuccess(false);
+      setAdminNewPin('');
+    }, 1200);
+  };
+
   // 管理員一鍵重設員工 PIN 碼為 0000
   const handleResetUserPin = async (empId: string) => {
     if (!isAdmin) {
@@ -347,7 +376,7 @@ export default function App() {
     }
   };
 
-  // 自訂修改個人密碼
+  // 修改個人密碼送出
   const handleChangePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentEmployee) return;
@@ -369,9 +398,10 @@ export default function App() {
       return;
     }
 
-    if (currentEmployee.role === 'admin') {
+    if (currentEmployee.role === 'admin' || currentEmployee.name === '吳昱勳') {
       setAdminPin(newPin);
       await sendToGoogleSheet({ action: 'updateAdminPin', newPin });
+      await sendToGoogleSheet({ action: 'updatePin', employeeId: currentEmployee.id, pin: newPin });
     } else {
       await sendToGoogleSheet({ action: 'updatePin', employeeId: currentEmployee.id, pin: newPin });
     }
@@ -388,7 +418,7 @@ export default function App() {
       setNewPin('');
       setConfirmNewPin('');
       setChangePinError('');
-    }, 1500);
+    }, 1200);
   };
 
   // 送出問題回報信件至 pcci.made2026@gmail.com
@@ -421,6 +451,51 @@ export default function App() {
       setIsSendingReport(false);
     }
   };
+
+  // 獨立可重用的螢幕虛擬數字鍵盤元件 (ATM / POS 樣式，點擊不跳手機鍵盤)
+  const VirtualKeypad = ({
+    onDigit,
+    onDelete,
+    onClear,
+  }: {
+    onDigit: (d: string) => void;
+    onDelete: () => void;
+    onClear: () => void;
+  }) => (
+    <div className="grid grid-cols-3 gap-2 max-w-[280px] mx-auto select-none pt-2">
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+        <button
+          key={num}
+          type="button"
+          onClick={() => { playPunchSound('tap'); onDigit(String(num)); }}
+          className="h-12 rounded-2xl bg-slate-100 hover:bg-orange-50 active:bg-orange-200 active:scale-95 text-lg font-bold text-slate-800 transition-all flex items-center justify-center shadow-xs"
+        >
+          {num}
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => { playPunchSound('tap'); onClear(); }}
+        className="h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-xs font-semibold text-slate-600 transition-all flex items-center justify-center shadow-xs"
+      >
+        清除
+      </button>
+      <button
+        type="button"
+        onClick={() => { playPunchSound('tap'); onDigit('0'); }}
+        className="h-12 rounded-2xl bg-slate-100 hover:bg-orange-50 active:bg-orange-200 active:scale-95 text-lg font-bold text-slate-800 transition-all flex items-center justify-center shadow-xs"
+      >
+        0
+      </button>
+      <button
+        type="button"
+        onClick={() => { playPunchSound('tap'); onDelete(); }}
+        className="h-12 rounded-2xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 active:scale-95 transition-all flex items-center justify-center shadow-xs"
+      >
+        <Delete className="w-5 h-5" />
+      </button>
+    </div>
+  );
 
   // 載入畫面
   if (!currentEmployee) {
@@ -481,6 +556,7 @@ export default function App() {
               setOldPin('');
               setNewPin('');
               setConfirmNewPin('');
+              setActivePinField('old');
               setChangePinError('');
               setChangePinSuccess(false);
               setIsChangePinOpen(true);
@@ -619,6 +695,40 @@ export default function App() {
 
         {activeTab === 'admin' && (
           <div className="space-y-4">
+            {/* 管理員專屬：管理員本人密碼修改卡片 */}
+            {isAdmin && (
+              <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent rounded-2xl border border-amber-300 p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-xs">
+                    <Crown className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                      <span>管理員專屬 PIN 碼 (吳昱勳)</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-mono font-bold">
+                        目前 PIN: {adminPin}
+                      </span>
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      具備所有員工免密碼切換、紀錄修改、薪資補登與密碼重設的最高權限。
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminNewPin('');
+                    setAdminPinSuccess(false);
+                    setIsAdminChangePinOpen(true);
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-xs transition-colors flex items-center gap-1.5 shrink-0"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  <span>修改管理員密碼</span>
+                </button>
+              </div>
+            )}
+
             <AdminPanel
               isAdmin={isAdmin}
               employees={employees}
@@ -720,7 +830,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* 1. 身分切換與 PIN 碼驗證彈窗 */}
+      {/* 1. 身分切換與 PIN 碼驗證彈窗 (含純觸控螢幕數字鍵盤) */}
       {isUserSwitchOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-200">
@@ -768,8 +878,8 @@ export default function App() {
                   ))}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="text-center py-2">
+                <div className="space-y-3">
+                  <div className="text-center py-1">
                     <div className="text-xs text-slate-500">正在切換至</div>
                     <div className="text-lg font-bold text-slate-900">{selectedTargetUser.name}</div>
                     <div className="text-xs text-orange-600 mt-0.5">
@@ -777,20 +887,41 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div>
-                    <input
-                      type="password"
-                      maxLength={6}
-                      autoFocus
-                      placeholder="請輸入 4 位數 PIN 碼"
-                      value={inputPin}
-                      onChange={(e) => { setInputPin(e.target.value); setPinError(''); }}
-                      className="w-full text-center text-xl tracking-widest font-mono border-2 border-slate-300 rounded-xl py-3 focus:outline-none focus:border-orange-500"
-                    />
-                    {pinError && <div className="text-xs text-rose-600 text-center font-semibold mt-1.5">{pinError}</div>}
+                  {/* 密碼顯示圓點區 (完全不跳系統鍵盤) */}
+                  <div className="flex justify-center items-center gap-3 py-2">
+                    {[0, 1, 2, 3].map((idx) => (
+                      <div
+                        key={idx}
+                        className={`w-4 h-4 rounded-full border-2 transition-all ${
+                          inputPin.length > idx
+                            ? 'bg-orange-600 border-orange-600 scale-110 shadow-xs'
+                            : 'bg-slate-100 border-slate-300'
+                        }`}
+                      />
+                    ))}
                   </div>
 
-                  <div className="flex gap-2">
+                  {pinError && <div className="text-xs text-rose-600 text-center font-semibold">{pinError}</div>}
+
+                  {/* 螢幕虛擬數字鍵盤 */}
+                  <VirtualKeypad
+                    onDigit={(d) => {
+                      if (inputPin.length < 6) {
+                        setInputPin((prev) => prev + d);
+                        setPinError('');
+                      }
+                    }}
+                    onDelete={() => {
+                      setInputPin((prev) => prev.slice(0, -1));
+                      setPinError('');
+                    }}
+                    onClear={() => {
+                      setInputPin('');
+                      setPinError('');
+                    }}
+                  />
+
+                  <div className="flex gap-2 pt-2">
                     <button
                       type="button"
                       onClick={() => setSelectedTargetUser(null)}
@@ -814,7 +945,73 @@ export default function App() {
         </div>
       )}
 
-      {/* 2. 修改密碼彈窗 */}
+      {/* 2. 管理員 (吳昱勳) 專屬修改密碼彈窗 (內建螢幕數字鍵盤) */}
+      {isAdminChangePinOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-200">
+            <div className="px-5 py-4 bg-amber-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Crown className="w-5 h-5 text-amber-300" />
+                <h3 className="font-bold text-base">修改管理員 (吳昱勳) PIN 碼</h3>
+              </div>
+              <button onClick={() => setIsAdminChangePinOpen(false)} className="text-amber-200 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-slate-500 text-center">請使用下方數字鍵輸入 4 位數新管理密碼：</p>
+
+              {/* 圓點顯示 */}
+              <div className="flex justify-center items-center gap-3 py-2">
+                {[0, 1, 2, 3].map((idx) => (
+                  <div
+                    key={idx}
+                    className={`w-4 h-4 rounded-full border-2 transition-all ${
+                      adminNewPin.length > idx
+                        ? 'bg-amber-600 border-amber-600 scale-110 shadow-xs'
+                        : 'bg-slate-100 border-slate-300'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {adminPinSuccess && (
+                <div className="text-xs text-emerald-600 text-center font-bold">✅ 管理員 PIN 碼已成功更新！</div>
+              )}
+
+              {/* 螢幕虛擬數字鍵盤 */}
+              <VirtualKeypad
+                onDigit={(d) => {
+                  if (adminNewPin.length < 6) setAdminNewPin((prev) => prev + d);
+                }}
+                onDelete={() => setAdminNewPin((prev) => prev.slice(0, -1))}
+                onClear={() => setAdminNewPin('')}
+              />
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAdminChangePinOpen(false)}
+                  className="flex-1 py-2.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAdminChangePinConfirm}
+                  className="flex-1 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl flex items-center justify-center gap-1 shadow-xs"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>確認儲存</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. 修改個人密碼彈窗 (內建螢幕數字鍵盤) */}
       {isChangePinOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-slate-200">
@@ -828,51 +1025,75 @@ export default function App() {
               </button>
             </div>
 
-            <form onSubmit={handleChangePinSubmit} className="p-5 space-y-3.5">
+            <form onSubmit={handleChangePinSubmit} className="p-5 space-y-3">
               <div className="text-xs text-slate-600 bg-slate-100 p-2.5 rounded-xl">
                 當前人員：<span className="font-bold text-slate-900">{currentEmployee.name}</span>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">舊 PIN 碼</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="未修改過預設為 0000 (管理員為 8888)"
-                  value={oldPin}
-                  onChange={(e) => setOldPin(e.target.value)}
-                  className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
+              {/* 欄位選擇切換（點選切換輸入對象，readOnly 絕不跳手機鍵盤） */}
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                <button
+                  type="button"
+                  onClick={() => setActivePinField('old')}
+                  className={`p-2 rounded-xl border text-[11px] font-bold transition-all ${
+                    activePinField === 'old'
+                      ? 'border-orange-500 bg-orange-50 text-orange-700 ring-2 ring-orange-200'
+                      : 'border-slate-200 bg-slate-50 text-slate-600'
+                  }`}
+                >
+                  <div>舊密碼</div>
+                  <div className="font-mono text-xs">{oldPin ? '••••' : '(輸入)'}</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePinField('new')}
+                  className={`p-2 rounded-xl border text-[11px] font-bold transition-all ${
+                    activePinField === 'new'
+                      ? 'border-orange-500 bg-orange-50 text-orange-700 ring-2 ring-orange-200'
+                      : 'border-slate-200 bg-slate-50 text-slate-600'
+                  }`}
+                >
+                  <div>新密碼</div>
+                  <div className="font-mono text-xs">{newPin ? '••••' : '(輸入)'}</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePinField('confirm')}
+                  className={`p-2 rounded-xl border text-[11px] font-bold transition-all ${
+                    activePinField === 'confirm'
+                      ? 'border-orange-500 bg-orange-50 text-orange-700 ring-2 ring-orange-200'
+                      : 'border-slate-200 bg-slate-50 text-slate-600'
+                  }`}
+                >
+                  <div>再次確認</div>
+                  <div className="font-mono text-xs">{confirmNewPin ? '••••' : '(輸入)'}</div>
+                </button>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">新 PIN 碼 (4 位數字)</label>
-                <input
-                  type="password"
-                  required
-                  maxLength={6}
-                  placeholder="請輸入新 4 位數 PIN 碼"
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value)}
-                  className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
+              {changePinError && <div className="text-xs text-rose-600 font-semibold text-center">{changePinError}</div>}
+              {changePinSuccess && <div className="text-xs text-emerald-600 font-semibold text-center">✅ 密碼修改成功！已儲存至雲端。</div>}
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">再次確認新 PIN 碼</label>
-                <input
-                  type="password"
-                  required
-                  maxLength={6}
-                  placeholder="請再次輸入新 PIN 碼"
-                  value={confirmNewPin}
-                  onChange={(e) => setConfirmNewPin(e.target.value)}
-                  className="w-full text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-
-              {changePinError && <div className="text-xs text-rose-600 font-semibold">{changePinError}</div>}
-              {changePinSuccess && <div className="text-xs text-emerald-600 font-semibold">✅ 密碼修改成功！已儲存至雲端。</div>}
+              {/* 螢幕虛擬數字鍵盤 */}
+              <VirtualKeypad
+                onDigit={(d) => {
+                  setChangePinError('');
+                  if (activePinField === 'old' && oldPin.length < 6) setOldPin((p) => p + d);
+                  if (activePinField === 'new' && newPin.length < 6) setNewPin((p) => p + d);
+                  if (activePinField === 'confirm' && confirmNewPin.length < 6) setConfirmNewPin((p) => p + d);
+                }}
+                onDelete={() => {
+                  setChangePinError('');
+                  if (activePinField === 'old') setOldPin((p) => p.slice(0, -1));
+                  if (activePinField === 'new') setNewPin((p) => p.slice(0, -1));
+                  if (activePinField === 'confirm') setConfirmNewPin((p) => p.slice(0, -1));
+                }}
+                onClear={() => {
+                  setChangePinError('');
+                  if (activePinField === 'old') setOldPin('');
+                  if (activePinField === 'new') setNewPin('');
+                  if (activePinField === 'confirm') setConfirmNewPin('');
+                }}
+              />
 
               <div className="flex gap-2 pt-2">
                 <button
@@ -894,7 +1115,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. 問題回報彈窗（自動寄信給 pcci.made2026@gmail.com） */}
+      {/* 4. 問題回報彈窗（自動寄信給 pcci.made2026@gmail.com） */}
       {isReportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200">
@@ -954,7 +1175,7 @@ export default function App() {
                 <textarea
                   required
                   rows={4}
-                  placeholder="請詳細描述遇到的狀況（例如：忘記打下班卡、今天在民權路工地提早半小時收工等）..."
+                  placeholder="請詳細描述遇到的狀況（例如：忘記打下班卡、今天在民權路工地提早收工等）..."
                   value={reportDesc}
                   onChange={(e) => setReportDesc(e.target.value)}
                   className="w-full text-xs border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -989,7 +1210,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 4. 補登編輯彈窗 */}
+      {/* 5. 補登編輯彈窗 */}
       <EditRecordModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
