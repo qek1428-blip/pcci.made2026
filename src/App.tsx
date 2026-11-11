@@ -27,6 +27,26 @@ export default function App() {
   const [manualDate, setManualDate] = useState<string | undefined>();
   const [manualEmployeeId, setManualEmployeeId] = useState<string | undefined>();
 
+  // 封裝安全送出資料給 Google 試算表的函式
+  const sendToGoogleSheet = async (payload: any) => {
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors', // 關鍵：避免被瀏覽器 CORS 攔截，確保資料送達 Google
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify(payload),
+      });
+      // 稍微等待 Google 試算表寫入儲存格後再重新抓取最新資料
+      setTimeout(() => {
+        fetchState();
+      }, 1500);
+    } catch (err) {
+      console.error('傳送至 Google 試算表發生錯誤:', err);
+    }
+  };
+
   // 從 Google 試算表取得最新資料
   const fetchState = async () => {
     try {
@@ -34,15 +54,19 @@ export default function App() {
       const json = await res.json();
       if (json.success && json.data) {
         const data: CompanyState = json.data;
-        setEmployees(data.employees);
-        setRecords(data.records);
+        if (data.employees && data.employees.length > 0) {
+          setEmployees(data.employees);
+          if (!currentEmployee) {
+            const firstWorker = data.employees.find((e) => e.role === 'worker') || data.employees[0];
+            setCurrentEmployee(firstWorker);
+            setIsAdmin(firstWorker.role === 'admin');
+          }
+        }
+        if (data.records) {
+          setRecords(data.records);
+        }
         if (data.settings?.adminPin) {
           setAdminPin(data.settings.adminPin);
-        }
-        if (!currentEmployee && data.employees.length > 0) {
-          const firstWorker = data.employees.find((e) => e.role === 'worker') || data.employees[0];
-          setCurrentEmployee(firstWorker);
-          setIsAdmin(firstWorker.role === 'admin');
         }
       }
     } catch (err) {
@@ -66,6 +90,7 @@ export default function App() {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+    // 網頁立即顯示打卡成功畫面
     const tempRecord: PunchRecord = {
       id: `rec-${todayStr}-${currentEmployee.id}`,
       employeeId: currentEmployee.id,
@@ -82,23 +107,16 @@ export default function App() {
     };
     setRecords((prev) => [tempRecord, ...prev.filter((r) => r.id !== tempRecord.id)]);
 
-    try {
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'punchIn',
-          employeeId: currentEmployee.id,
-          date: todayStr,
-          time: timeStr,
-          siteName,
-          notes,
-          locationStr,
-        }),
-      });
-      fetchState();
-    } catch (err) {
-      console.error('同步至 Google 試算表失敗', err);
-    }
+    // 同步寫入 Google 試算表
+    await sendToGoogleSheet({
+      action: 'punchIn',
+      employeeId: currentEmployee.id,
+      date: todayStr,
+      time: timeStr,
+      siteName,
+      notes,
+      locationStr,
+    });
   };
 
   // 2. 下班打卡
@@ -121,60 +139,29 @@ export default function App() {
       })
     );
 
-    try {
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'punchOut',
-          employeeId: currentEmployee.id,
-          date: todayStr,
-          time: timeStr,
-          notes,
-        }),
-      });
-      fetchState();
-    } catch (err) {
-      console.error('下班同步失敗', err);
-    }
+    await sendToGoogleSheet({
+      action: 'punchOut',
+      employeeId: currentEmployee.id,
+      date: todayStr,
+      time: timeStr,
+      notes,
+    });
   };
 
   // 3. 管理員儲存/補登紀錄
   const handleSaveRecord = async (data: Partial<PunchRecord>) => {
-    try {
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'saveRecord', record: data }),
-      });
-      fetchState();
-    } catch (err) {
-      console.error('儲存紀錄失敗', err);
-    }
+    await sendToGoogleSheet({ action: 'saveRecord', record: data });
   };
 
   // 4. 管理員刪除紀錄
   const handleDeleteRecord = async (recordId: string) => {
     setRecords((prev) => prev.filter((r) => r.id !== recordId));
-    try {
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'deleteRecord', id: recordId }),
-      });
-    } catch (err) {
-      console.error('刪除失敗', err);
-    }
+    await sendToGoogleSheet({ action: 'deleteRecord', id: recordId });
   };
 
   // 5. 新增員工
   const handleAddEmployee = async (empData: Partial<Employee>) => {
-    try {
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'addEmployee', employee: empData }),
-      });
-      fetchState();
-    } catch (err) {
-      console.error('新增員工失敗', err);
-    }
+    await sendToGoogleSheet({ action: 'addEmployee', employee: empData });
   };
 
   // 6. 更新員工資料
@@ -188,14 +175,7 @@ export default function App() {
   // 7. 刪除員工
   const handleDeleteEmployee = async (id: string) => {
     setEmployees((prev) => prev.filter((e) => e.id !== id));
-    try {
-      await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'deleteEmployee', id }),
-      });
-    } catch (err) {
-      console.error('刪除員工失敗', err);
-    }
+    await sendToGoogleSheet({ action: 'deleteEmployee', id });
   };
 
   const handleOpenEditRecord = (record: PunchRecord) => {
