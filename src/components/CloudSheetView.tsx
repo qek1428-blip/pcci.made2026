@@ -197,4 +197,77 @@ export const CloudSheetView: React.FC<CloudSheetViewProps> = ({
                 <th className="px-4 py-3 font-semibold text-center">上班時間</th>
                 <th className="px-4 py-3 font-semibold text-center">下班時間</th>
                 <th className="px-4 py-3 font-semibold text-center">累計工時</th>
-                <th className="px-4
+                <th className="px-4 py-3 font-semibold text-center">折算工數</th>
+                <th className="px-4 py-3 font-semibold text-right">當日工資</th>
+                <th className="px-4 py-3 font-semibold">施工案場</th>
+                <th className="px-4 py-3 font-semibold text-center">狀態</th>
+                <th className="px-4 py-3 font-semibold">備註說明</th>
+                <th className="px-4 py-3 font-semibold text-center">操作</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E6E1D8]/60 text-[#2B2521]">
+              {filteredRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={13} className="px-4 py-8 text-center text-[#998D80]">
+                    該條件下無任何打卡紀錄
+                  </td>
+                </tr>
+              ) : (
+                filteredRecords.map((record, index) => {
+                  const emp = employees.find((e) => e.id === record.employeeId);
+                  const isMissingOut = record.clockInTime && !record.clockOutTime;
+                  
+                  return (
+                    <tr key={record.id} className="hover:bg-[#FAF8F5] transition-colors">
+                      <td className="px-4 py-3 text-center text-[#998D80]">{index + 1}</td>
+                      <td className="px-4 py-3 font-mono font-bold text-[#54473C]">{record.date}</td>
+                      <td className="px-4 py-3 font-bold">{record.employeeName}</td>
+                      <td className="px-4 py-3 text-[#706458]">{emp?.workType || '一般'}</td>
+                      <td className="px-4 py-3 font-mono text-center">{record.clockInTime}</td>
+                      <td className="px-4 py-3 font-mono text-center">
+                        {record.clockOutTime ? (
+                          record.clockOutTime
+                        ) : (
+                          <span className="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded">缺卡</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-center">{record.durationHours ? `${record.durationHours}h` : '-'}</td>
+                      <td className="px-4 py-3 text-center font-bold text-[#6E5D4F]">{record.wageMultiplier || 0} 工</td>
+                      <td className="px-4 py-3 text-right font-mono font-bold text-[#6E5D4F]">
+                        NT$ {(record.calculatedWage || 0).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3">{record.siteName || '-'}</td>
+                      <td className="px-4 py-3 text-center">
+                        {isMissingOut ? (
+                          <span className="px-2 py-0.5 rounded border border-rose-200 bg-rose-50 text-rose-600 text-[10px] font-bold">缺卡異常</span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded border border-[#D4C9BC] bg-[#EAE3DA] text-[#4A3D32] text-[10px] font-bold">已下班</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[#706458] max-w-[150px] truncate" title={record.notes}>
+                        {record.notes || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {isAdmin ? (
+                          <button
+                            onClick={() => onEditRecord(record)}
+                            className="p-1.5 text-[#998D80] hover:text-[#2B2521] hover:bg-[#EAE3DA] rounded-lg transition-colors inline-flex"
+                            title="修正此紀錄"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <span className="text-[#D6CEC3]">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
