@@ -272,7 +272,7 @@ export default function App() {
       setLoginInputPin('');
       setLoginPinError('');
       setActiveTab('punch');
-      playPunchSound('in');
+      playPunchSound('tap');
     } else {
       setLoginPinError('PIN 碼錯誤！(預設員工: 0000 / 管理員: 8888)');
       playPunchSound('tap');
@@ -427,7 +427,7 @@ export default function App() {
         await sendToGoogleSheet({ action: 'saveBonus', bonus: newBonus });
       }
 
-      playPunchSound('in');
+      playPunchSound('tap');
       setIsBonusModalOpen(false);
       setBonusAmount('');
       setBonusNote('');
@@ -484,7 +484,7 @@ export default function App() {
       setIsUserSwitchOpen(false);
       setSwitchTargetUser(null);
       setSwitchInputPin('');
-      playPunchSound('in');
+      playPunchSound('tap');
       return;
     }
 
@@ -498,7 +498,7 @@ export default function App() {
       setSwitchTargetUser(null);
       setSwitchInputPin('');
       setSwitchPinError('');
-      playPunchSound('in');
+      playPunchSound('tap');
     } else {
       setSwitchPinError('PIN 碼錯誤！(預設員工: 0000 / 管理員: 8888)');
       playPunchSound('tap');
@@ -510,7 +510,7 @@ export default function App() {
       setIsAdmin(true);
       setAdminUnlockPin('');
       setAdminUnlockError('');
-      playPunchSound('in');
+      playPunchSound('tap');
     } else {
       setAdminUnlockError('管理員 PIN 碼錯誤！');
       playPunchSound('tap');
