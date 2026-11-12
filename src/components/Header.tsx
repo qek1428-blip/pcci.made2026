@@ -38,8 +38,13 @@ export const Header: React.FC<HeaderProps> = ({
   });
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E6E1D8] pt-safe">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <header
+      className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E6E1D8] transition-all"
+      style={{
+        paddingTop: 'max(env(safe-area-inset-top, 0px), 8px)',
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
         {/* Brand Zone */}
         <div className="flex items-center gap-2.5 shrink-0">
           <div className="w-9 h-9 rounded-xl overflow-hidden bg-black border border-[#2B2521] flex items-center justify-center shrink-0 shadow-sm">
@@ -51,14 +56,14 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-[#2B2521] text-base tracking-tight">
+              <span className="font-bold text-[#2B2521] text-base tracking-tight leading-none">
                 薄薄工程行
               </span>
-              <span className="text-[10px] font-semibold px-1.5 py-0.2 bg-[#EAE3DA] text-[#4A3D32] border border-[#D4C9BC] rounded">
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-[#EAE3DA] text-[#4A3D32] border border-[#D4C9BC] rounded leading-none">
                 打卡系統
               </span>
             </div>
-            <p className="text-[10px] text-[#706458] hidden sm:block">
+            <p className="text-[10px] text-[#706458] hidden sm:block mt-0.5">
               日薪制員工考勤 · 雲端表單即時同步
             </p>
           </div>
