@@ -860,51 +860,50 @@ export default function App() {
           setIsUserSwitchOpen(true);
         }}
       />
+{/* 快捷操作條：手機自適應排版 */}
+      <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-2.5">
+        <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-1">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => {
+                setOldPin('');
+                setNewPin('');
+                setConfirmNewPin('');
+                setActivePinField('old');
+                setChangePinError('');
+                setChangePinSuccess(false);
+                setIsChangePinOpen(true);
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-[#E6E1D8] text-[#54473C] rounded-xl hover:bg-[#FAF8F5] transition-colors shadow-2xs text-[11px] font-medium shrink-0"
+            >
+              <KeyRound className="w-3 h-3 text-[#6E5D4F]" />
+              <span>修改 PIN 碼</span>
+            </button>
 
-      {/* 快捷操作條 */}
-      <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-3 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-[#E6E1D8] text-[#706458] hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors shadow-2xs text-[11px] font-medium shrink-0"
+              title="登出並退回身分鎖定頁"
+            >
+              <LogOut className="w-3 h-3 text-[#998D80]" />
+              <span>登出鎖定</span>
+            </button>
+          </div>
+
           <button
             onClick={() => {
-              setOldPin('');
-              setNewPin('');
-              setConfirmNewPin('');
-              setActivePinField('old');
-              setChangePinError('');
-              setChangePinSuccess(false);
-              setIsChangePinOpen(true);
+              setReportSuccess(false);
+              setReportDesc('');
+              setReportPhone(currentEmployee.phone || '');
+              setIsReportModalOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#E6E1D8] text-[#54473C] rounded-xl hover:bg-[#FAF8F5] transition-colors shadow-2xs font-medium"
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-[#EAE3DA] border border-[#D4C9BC] text-[#4A3D32] rounded-xl hover:bg-[#DFD6C9] transition-colors shadow-2xs text-[11px] font-medium shrink-0 ml-auto"
           >
-            <KeyRound className="w-3.5 h-3.5 text-[#6E5D4F]" />
-            <span>修改個人 PIN 碼</span>
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#E6E1D8] text-[#706458] hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors shadow-2xs font-medium"
-            title="登出並退回身分鎖定頁"
-          >
-            <LogOut className="w-3.5 h-3.5 text-[#998D80] group-hover:text-rose-600" />
-            <span>登出鎖定</span>
+            <MessageSquareWarning className="w-3 h-3 text-[#6E5D4F]" />
+            <span>回報問題給老闆</span>
           </button>
         </div>
-
-        <button
-          onClick={() => {
-            setReportSuccess(false);
-            setReportDesc('');
-            setReportPhone(currentEmployee.phone || '');
-            setIsReportModalOpen(true);
-          }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#EAE3DA] border border-[#D4C9BC] text-[#4A3D32] rounded-xl hover:bg-[#DFD6C9] transition-colors shadow-2xs font-medium"
-        >
-          <MessageSquareWarning className="w-3.5 h-3.5 text-[#6E5D4F]" />
-          <span>回報問題給老闆</span>
-        </button>
       </div>
-
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-4">
         {/* 電腦版分頁標籤列 */}
         <div className="hidden sm:flex items-center gap-1.5 p-1.5 bg-white/90 border border-[#E6E1D8] rounded-2xl mb-6 max-w-xl mx-auto shadow-xs">
           <button
