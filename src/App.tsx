@@ -14,6 +14,21 @@ import boboLogo from './assets/images/bobo_logo.jpg';
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhrpQIs-ygEFPOhVM8tafjpjSccqGMcsZ2-41WuxvEL-N9jXWi7eJVTpkKqD1wYEBX/exec';
 
+// 核心時區修復：以本地系統時區產生 YYYY-MM-DD，徹底解決早上 8 點前 UTC 跨日倒退一天的問題
+export const getLocalDateString = (d: Date = new Date()): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const getLocalMonthPrefix = (d: Date = new Date()): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
+// PIN 碼格式化防呆：嚴格確保 4 位數
 const sanitizePin = (pinVal: any, defaultPin: string = '0000'): string => {
   if (pinVal === null || pinVal === undefined || pinVal === '') return defaultPin;
   let s = String(pinVal).trim();
@@ -91,7 +106,7 @@ export default function App() {
   // 薪資加給新增彈窗
   const [isBonusModalOpen, setIsBonusModalOpen] = useState(false);
   const [bonusEmpId, setBonusEmpId] = useState('ALL');
-  const [bonusDate, setBonusDate] = useState(new Date().toISOString().split('T')[0]);
+  const [bonusDate, setBonusDate] = useState(getLocalDateString());
   const [bonusAmount, setBonusAmount] = useState<number | ''>('');
   const [bonusNote, setBonusNote] = useState('');
   const [isSavingBonus, setIsSavingBonus] = useState(false);
@@ -233,7 +248,8 @@ export default function App() {
     fetchState();
   }, []);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  // 依據本地設備真實日期比對今日紀錄
+  const todayStr = getLocalDateString();
   const currentTodayRecord = records.find(
     (r) => r.employeeId === currentEmployee?.id && r.date === todayStr
   );
@@ -276,16 +292,17 @@ export default function App() {
   };
 
   // 打卡相關
-  const handlePunchIn = async (siteName: string, notes: string, locationStr?: string) => {
+  const handlePunchIn = async (siteName: string, notes: string) => {
     if (!currentEmployee) return;
     const now = new Date();
+    const currentDateStr = getLocalDateString(now);
     const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     const newRecord: PunchRecord = {
-      id: `rec-${todayStr}-${currentEmployee.id}`,
+      id: `rec-${currentDateStr}-${currentEmployee.id}`,
       employeeId: currentEmployee.id,
       employeeName: currentEmployee.name,
-      date: todayStr,
+      date: currentDateStr,
       clockInTime: timeStr,
       clockOutTime: '',
       siteName: siteName || '',
@@ -305,18 +322,19 @@ export default function App() {
   const handlePunchOut = async (notes?: string) => {
     if (!currentEmployee) return;
     const now = new Date();
+    const currentDateStr = getLocalDateString(now);
     const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    const todayRec = records.find((r) => r.employeeId === currentEmployee.id && r.date === todayStr);
+    const todayRec = records.find((r) => r.employeeId === currentEmployee.id && r.date === currentDateStr);
     const inTime = todayRec?.clockInTime || timeStr;
     const stats = calculateWorkStats(inTime, timeStr, currentEmployee.dailyRate);
 
     const updatedRecord: PunchRecord = {
       ...(todayRec || {
-        id: `rec-${todayStr}-${currentEmployee.id}`,
+        id: `rec-${currentDateStr}-${currentEmployee.id}`,
         employeeId: currentEmployee.id,
         employeeName: currentEmployee.name,
-        date: todayStr,
+        date: currentDateStr,
         clockInTime: inTime,
         siteName: '',
       }),
@@ -329,7 +347,7 @@ export default function App() {
     };
 
     setRecords((prev) =>
-      prev.map((r) => (r.employeeId === currentEmployee.id && r.date === todayStr ? updatedRecord : r))
+      prev.map((r) => (r.employeeId === currentEmployee.id && r.date === currentDateStr ? updatedRecord : r))
     );
 
     await sendToGoogleSheet({ action: 'saveRecord', record: updatedRecord });
@@ -337,14 +355,15 @@ export default function App() {
 
   // 補登 / 修正出勤紀錄
   const handleSaveRecord = async (data: Partial<PunchRecord>) => {
-    const recordId = data.id || `rec-${data.date || todayStr}-${data.employeeId}-${Date.now()}`;
+    const targetDate = formatRecordDate(data.date || getLocalDateString());
+    const recordId = data.id || `rec-${targetDate}-${data.employeeId}-${Date.now()}`;
     const cleanClockOut = data.clockOutTime ? formatRecordTime(data.clockOutTime) : '';
 
     const newRecord: PunchRecord = {
       id: recordId,
       employeeId: data.employeeId || '',
       employeeName: data.employeeName || '員工',
-      date: formatRecordDate(data.date || todayStr),
+      date: targetDate,
       clockInTime: formatRecordTime(data.clockInTime || '08:00:00'),
       clockOutTime: cleanClockOut,
       siteName: data.siteName || '',
@@ -375,7 +394,7 @@ export default function App() {
     await sendToGoogleSheet({ action: 'deleteRecord', id: recordId });
   };
 
-  // 薪資加給送出 (支援單一員工或全員共同加給)
+  // 薪資加給送出
   const handleSaveBonusSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) {
@@ -860,7 +879,8 @@ export default function App() {
           setIsUserSwitchOpen(true);
         }}
       />
-{/* 快捷操作條：手機自適應排版 */}
+
+      {/* 快捷操作條（自適應手機螢幕） */}
       <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-2.5">
         <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-1">
           <div className="flex items-center gap-1.5 shrink-0">
@@ -904,6 +924,8 @@ export default function App() {
           </button>
         </div>
       </div>
+
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-4">
         {/* 電腦版分頁標籤列 */}
         <div className="hidden sm:flex items-center gap-1.5 p-1.5 bg-white/90 border border-[#E6E1D8] rounded-2xl mb-6 max-w-xl mx-auto shadow-xs">
           <button
@@ -1072,7 +1094,7 @@ export default function App() {
                   }}
                   onOpenAddBonus={() => {
                     setBonusEmpId('ALL');
-                    setBonusDate(todayStr);
+                    setBonusDate(getLocalDateString());
                     setBonusAmount('');
                     setBonusNote('');
                     setIsBonusModalOpen(true);
@@ -1087,7 +1109,7 @@ export default function App() {
                   }}
                 />
 
-                {/* 僅管理員可見：全體人員 PIN 碼管理 */}
+                {/* 全體人員 PIN 碼管理 */}
                 <div className="bg-white rounded-2xl border border-[#E6E1D8] p-5 shadow-xs">
                   <div className="flex items-center gap-2 mb-2">
                     <KeyRound className="w-4 h-4 text-[#6E5D4F]" />
@@ -1215,7 +1237,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* 薪資加給新增彈窗 (Taupe 暖駝色) */}
+      {/* 薪資加給新增彈窗 */}
       {isBonusModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2521]/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-[#E6E1D8]">
@@ -1279,7 +1301,6 @@ export default function App() {
                   <label className="text-xs font-semibold text-[#54473C]">加給項目說明 / 事由</label>
                   <span className="text-[10px] text-[#998D80]">點擊快速代入：</span>
                 </div>
-                {/* 快速常用標籤 */}
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {['遠程油資貼補', '現場誤餐津貼', '特定案場趕工獎金', '重物搬運補貼', '全勤獎勵'].map((tag) => (
                     <button
@@ -1676,7 +1697,7 @@ export default function App() {
 
               {reportSuccess && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-semibold text-center">
-                  ✅ 已成功寄出通知至負責人信箱！薄老闆將會收到郵件通知。
+                  ✅ 已成功寄出通知至負責人信箱！將會收到郵件通知。
                 </div>
               )}
 
