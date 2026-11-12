@@ -14,6 +14,14 @@ interface PunchClockProps {
   onEditRecord: (record: PunchRecord) => void;
 }
 
+const checkIsMissingOut = (dateStr: string, outTime?: string) => {
+  if (outTime) return false;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return false;
+  const limitTime = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 19, 0, 0);
+  return new Date() > limitTime;
+};
+
 export const PunchClock: React.FC<PunchClockProps> = ({
   currentEmployee,
   records,
@@ -37,26 +45,22 @@ export const PunchClock: React.FC<PunchClockProps> = ({
   const timeString = currentTime.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const dateString = currentTime.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
-  // 使用本地真實日期判定
   const year = currentTime.getFullYear();
   const month = String(currentTime.getMonth() + 1).padStart(2, '0');
   const day = String(currentTime.getDate()).padStart(2, '0');
   const todayStr = `${year}-${month}-${day}`;
   const currentMonthPrefix = `${year}-${month}`;
 
-  // 取出當日該員工「所有」的打卡紀錄
   const todayRecords = records.filter((r) => r.employeeId === currentEmployee.id && r.date === todayStr);
   todayRecords.sort((a, b) => a.clockInTime.localeCompare(b.clockInTime));
   
-  // 最新一筆狀態判定：若無紀錄或最新一筆已打下班卡 -> 顯示上班按鈕；若有紀錄但沒下班卡 -> 顯示下班按鈕
   const latestRecord = todayRecords[todayRecords.length - 1];
   const isCurrentlyWorking = Boolean(latestRecord && !latestRecord.clockOutTime);
+  const isLatestMissing = latestRecord && checkIsMissingOut(latestRecord.date, latestRecord.clockOutTime);
 
-  // 本日總工時與工資
   const totalDurationToday = todayRecords.reduce((sum, r) => sum + (r.durationHours || 0), 0);
   const totalWageToday = todayRecords.reduce((sum, r) => sum + (r.calculatedWage || 0), 0);
 
-  // 當月預估實領
   const empMonthRecords = records.filter((r) => r.employeeId === currentEmployee.id && r.date.startsWith(currentMonthPrefix));
   const monthWorkWage = empMonthRecords.reduce((sum, r) => sum + (Number(r.calculatedWage) || 0), 0);
   const empMonthBonuses = bonuses.filter((b) => b.employeeId === currentEmployee.id && b.date.startsWith(currentMonthPrefix));
@@ -95,17 +99,15 @@ export const PunchClock: React.FC<PunchClockProps> = ({
 
   return (
     <div className="max-w-xl mx-auto space-y-4">
+      {/* 1. 打卡核心卡片 */}
       <div className="bg-white rounded-3xl border border-[#E6E1D8] p-6 shadow-xs text-center space-y-5">
         <div>
           <div className="text-xs text-[#706458] font-medium">{dateString}</div>
-          <div className="text-4xl sm:text-5xl font-mono font-black text-[#2B2521] tracking-wider my-2">
-            {timeString}
-          </div>
-          
+          <div className="text-4xl sm:text-5xl font-mono font-black text-[#2B2521] tracking-wider my-2">{timeString}</div>
           <div className="inline-flex items-center gap-2 p-1.5 pl-3 rounded-2xl bg-[#FAF8F5] border border-[#E6E1D8]">
             <span className="text-xs text-[#706458]">出勤人員：</span>
             <span className="font-bold text-[#2B2521] text-sm">{currentEmployee.name}</span>
-            <button type="button" onClick={onOpenSwitchUser} className="px-2.5 py-1 text-[11px] font-bold text-[#4A3D32] bg-[#EAE3DA] hover:bg-[#DFD6C9] border border-[#D4C9BC] rounded-xl transition-all active:scale-95 flex items-center gap-1 shadow-2xs" title="切換打卡人員"><Users className="w-3 h-3 text-[#6E5D4F]" /><span>換人打卡</span></button>
+            <button type="button" onClick={onOpenSwitchUser} className="px-2.5 py-1 text-[11px] font-bold text-[#4A3D32] bg-[#EAE3DA] hover:bg-[#DFD6C9] border border-[#D4C9BC] rounded-xl transition-all active:scale-95 flex items-center gap-1 shadow-2xs"><Users className="w-3 h-3 text-[#6E5D4F]" /><span>換人打卡</span></button>
           </div>
         </div>
 
@@ -145,17 +147,19 @@ export const PunchClock: React.FC<PunchClockProps> = ({
         )}
       </div>
 
-      {/* 2. 本日出勤打卡狀態 (支援多次打卡之總計) */}
+      {/* 2. 本日出勤打卡狀態 */}
       <div className="bg-white rounded-3xl border border-[#E6E1D8] p-5 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-[#6E5D4F]" /><h3 className="font-bold text-sm text-[#2B2521]">本日出勤打卡狀態</h3></div>
           <div>
             {!latestRecord ? (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">今日未出勤</span>
-            ) : isCurrentlyWorking ? (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold animate-pulse">施工出勤中</span>
-            ) : (
+            ) : latestRecord.clockOutTime ? (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">可再次打卡</span>
+            ) : isLatestMissing ? (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-semibold animate-pulse">逾 19:00 缺卡異常</span>
+            ) : (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold animate-pulse">施工出勤中</span>
             )}
           </div>
         </div>
@@ -167,7 +171,17 @@ export const PunchClock: React.FC<PunchClockProps> = ({
           </div>
           <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E6E1D8]">
             <div className="text-[10px] text-[#706458] font-medium">最近一次下班</div>
-            <div className="text-sm font-mono font-bold text-[#2B2521] mt-0.5">{latestRecord?.clockOutTime ? latestRecord.clockOutTime : (isCurrentlyWorking ? '出勤中' : '--:--:--')}</div>
+            <div className="text-sm font-mono font-bold text-[#2B2521] mt-0.5">
+              {latestRecord?.clockOutTime ? (
+                latestRecord.clockOutTime
+              ) : isLatestMissing ? (
+                <span className="text-rose-600">異常未打卡</span>
+              ) : isCurrentlyWorking ? (
+                '出勤中'
+              ) : (
+                '--:--:--'
+              )}
+            </div>
           </div>
           <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E6E1D8]">
             <div className="text-[10px] text-[#706458] font-medium">本日總計工時</div>
@@ -209,18 +223,24 @@ export const PunchClock: React.FC<PunchClockProps> = ({
           <div className="text-center py-5 text-xs text-[#998D80] bg-[#FAF8F5] rounded-2xl border border-dashed border-[#E6E1D8]">尚無近期出勤紀錄</div>
         ) : (
           <div className="divide-y divide-[#E6E1D8]">
-            {empRecentRecords.map((r) => (
-              <div key={r.id} className="py-2.5 flex items-center justify-between text-xs">
-                <div>
-                  <div className="flex items-center gap-2"><span className="font-mono font-bold text-[#2B2521]">{r.date}</span><span className="px-1.5 py-0.2 rounded bg-[#FAF8F5] border border-[#E6E1D8] text-[10px] text-[#706458]">{r.siteName || '一般出勤'}</span></div>
-                  <div className="text-[11px] text-[#706458] mt-0.5">{r.clockInTime} ~ {r.clockOutTime || '⚠️ 缺下班卡'} {r.durationHours ? ` · ${r.durationHours}小時` : ''}</div>
+            {empRecentRecords.map((r) => {
+              const missing = checkIsMissingOut(r.date, r.clockOutTime);
+              return (
+                <div key={r.id} className="py-2.5 flex items-center justify-between text-xs">
+                  <div>
+                    <div className="flex items-center gap-2"><span className="font-mono font-bold text-[#2B2521]">{r.date}</span><span className="px-1.5 py-0.2 rounded bg-[#FAF8F5] border border-[#E6E1D8] text-[10px] text-[#706458]">{r.siteName || '一般出勤'}</span></div>
+                    <div className="text-[11px] text-[#706458] mt-0.5">
+                      {r.clockInTime} ~ {r.clockOutTime ? r.clockOutTime : (missing ? <span className="text-rose-600 font-bold">⚠️ 缺卡異常</span> : '🔨 出勤中')}
+                      {r.durationHours ? ` · ${r.durationHours}h` : ''}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-mono font-bold text-[#6E5D4F]">NT$ {(r.calculatedWage || 0).toLocaleString()}</div>
+                    <div className="text-[10px] text-[#998D80]">{r.wageMultiplier ? `${r.wageMultiplier}工` : '1.0工'}</div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-mono font-bold text-[#6E5D4F]">NT$ {(r.calculatedWage || 0).toLocaleString()}</div>
-                  <div className="text-[10px] text-[#998D80]">{r.wageMultiplier ? `${r.wageMultiplier}工` : '1.0工'}</div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
