@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --font-sans: 'Noto Sans TC', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-sans: 'DM Sans', 'Noto Sans TC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
   body {
@@ -13,11 +13,20 @@
   }
 }
 
-/* Safe areas for iOS iPhone notch and home bar */
-.pb-safe {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+/* 隱藏橫向滾動條但保持滾動功能 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
+/* iOS 頂部與底部安全邊距 */
 .pt-safe {
-  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+}
+
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
