@@ -1,469 +1,231 @@
-import React, { useState } from 'react';
-import { PunchRecord, Employee } from '../types';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Calendar as CalendarIcon,
-  MapPin,
-  Shield,
-  Edit2,
-  PlusCircle,
-  X,
-  AlertCircle,
-  CheckCircle2,
-} from 'lucide-react';
-import { playPunchSound } from '../utils/sound';
+import React, { useState, useMemo } from 'react';
+import { PunchRecord, Employee, BonusRecord } from '../types';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, Edit3, Plus, Coins, AlertCircle } from 'lucide-react';
 
 interface CalendarViewProps {
   records: PunchRecord[];
+  bonuses?: BonusRecord[];
   employees: Employee[];
   currentEmployee: Employee;
   isAdmin: boolean;
   onEditRecord: (record: PunchRecord) => void;
-  onAddManualPunch: (dateStr: string, employeeId?: string) => void;
+  onAddManualPunch: (dateStr: string, empId: string) => void;
 }
+
+// 缺卡異常判定：當日 19:00 前未下班
+const checkIsMissingOut = (dateStr: string, outTime?: string) => {
+  if (outTime) return false;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return false;
+  const limitTime = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 19, 0, 0);
+  return new Date() > limitTime;
+};
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   records,
+  bonuses = [],
   employees,
   currentEmployee,
   isAdmin,
   onEditRecord,
   onAddManualPunch,
 }) => {
-  // Calendar Month State (Defaults to November 2026)
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(10); // 0-indexed: 10 is November
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(
-    isAdmin ? 'ALL' : currentEmployee.id
-  );
-  const [selectedDayModal, setSelectedDayModal] = useState<string | null>(null);
+  const [currentDate, setCurrentDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
+  const [selectedEmpId, setSelectedEmpId] = useState<string>(isAdmin ? 'ALL' : currentEmployee.id);
+  const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfMonth = new Date(year, month, 1).getDay();
 
   const prevMonth = () => {
-    playPunchSound('tap');
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
+    setCurrentDate(new Date(year, month - 1, 1));
+    setSelectedDateStr(null);
   };
-
   const nextMonth = () => {
-    playPunchSound('tap');
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
+    setCurrentDate(new Date(year, month + 1, 1));
+    setSelectedDateStr(null);
   };
 
-  const monthYearLabel = `${currentYear} 年 ${currentMonth + 1} 月`;
-  const monthStrPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+  const calendarDays = [];
+  for (let i = 0; i < firstDayOfMonth; i++) calendarDays.push(null);
+  for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
 
-  // Filter records by month
-  const monthlyRecords = records.filter((r) => r.date.startsWith(monthStrPrefix));
+  // 整理每日出勤與加給資料
+  const dailyData = useMemo(() => {
+    const data: Record<string, { records: PunchRecord[], bonuses: BonusRecord[] }> = {};
+    const targetRecords = selectedEmpId === 'ALL' ? records : records.filter(r => r.employeeId === selectedEmpId);
+    const targetBonuses = selectedEmpId === 'ALL' ? bonuses : bonuses.filter(b => b.employeeId === selectedEmpId);
 
-  // Further filter by selected employee if not 'ALL'
-  const displayedRecords =
-    selectedEmployeeId === 'ALL'
-      ? monthlyRecords
-      : monthlyRecords.filter((r) => r.employeeId === selectedEmployeeId);
-
-  // Group records by date (YYYY-MM-DD)
-  const recordsByDate = new Map<string, PunchRecord[]>();
-  for (const rec of displayedRecords) {
-    const list = recordsByDate.get(rec.date) || [];
-    list.push(rec);
-    recordsByDate.set(rec.date, list);
-  }
-
-  // Generate calendar days
-  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay(); // 0 is Sunday
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-  const calendarDays: Array<{ dayNumber: number; dateStr: string } | null> = [];
-  for (let i = 0; i < firstDayOfWeek; i++) {
-    calendarDays.push(null);
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dStr = String(d).padStart(2, '0');
-    calendarDays.push({
-      dayNumber: d,
-      dateStr: `${monthStrPrefix}-${dStr}`,
+    targetRecords.forEach(r => {
+      if (!data[r.date]) data[r.date] = { records: [], bonuses: [] };
+      data[r.date].records.push(r);
     });
-  }
+    targetBonuses.forEach(b => {
+      if (!data[b.date]) data[b.date] = { records: [], bonuses: [] };
+      data[b.date].bonuses.push(b);
+    });
+    return data;
+  }, [records, bonuses, selectedEmpId]);
 
-  // Selected date records for the popup sheet
-  const selectedDateRecords = selectedDayModal
-    ? records.filter((r) => r.date === selectedDayModal)
-    : [];
-
-  const handleDayClick = (dateStr: string) => {
-    playPunchSound('tap');
-    setSelectedDayModal(dateStr);
+  const handleDayClick = (day: number | null) => {
+    if (!day) return;
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    setSelectedDateStr(dateStr);
   };
+
+  const selectedDayInfo = selectedDateStr ? dailyData[selectedDateStr] : null;
 
   return (
-    <div className="space-y-6">
-      {/* Month & Filter Controls Bar */}
-      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-taupe-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Month Selector */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={prevMonth}
-            className="w-9 h-9 rounded-xl border border-taupe-200 flex items-center justify-center hover:bg-taupe-100 transition-colors text-taupe-700"
-            title="上個月"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5 text-taupe-600" />
-            <span className="text-lg font-bold text-taupe-900 tracking-tight">
-              {monthYearLabel}
-            </span>
-          </div>
-          <button
-            onClick={nextMonth}
-            className="w-9 h-9 rounded-xl border border-taupe-200 flex items-center justify-center hover:bg-taupe-100 transition-colors text-taupe-700"
-            title="下個月"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+    <div className="max-w-4xl mx-auto space-y-4">
+      {/* 頂部控制列 */}
+      <div className="bg-white rounded-3xl p-5 border border-[#E6E1D8] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <CalendarIcon className="w-5 h-5 text-[#6E5D4F]" />
+          <h2 className="text-lg font-bold text-[#2B2521]">打卡日曆檢視</h2>
         </div>
 
-        {/* Employee Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          <span className="text-xs font-semibold text-taupe-500 shrink-0">
-            篩選檢視：
-          </span>
-          <select
-            value={selectedEmployeeId}
-            onChange={(e) => setSelectedEmployeeId(e.target.value)}
-            className="text-xs sm:text-sm font-medium border border-taupe-200 rounded-xl px-3 py-2 bg-taupe-50 text-taupe-800 focus:outline-none focus:ring-2 focus:ring-taupe-500"
-          >
-            <option value="ALL">全部員工 (工程行全員)</option>
-            {employees.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.name} ({emp.workType})
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {isAdmin && (
+            <select
+              value={selectedEmpId}
+              onChange={(e) => {
+                setSelectedEmpId(e.target.value);
+                setSelectedDateStr(null);
+              }}
+              className="flex-1 sm:flex-none text-xs border border-[#E6E1D8] rounded-xl px-3 py-2 bg-[#FAF8F5] focus:outline-none focus:ring-2 focus:ring-[#6E5D4F] font-bold text-[#2B2521]"
+            >
+              <option value="ALL">全部員工 (全員)</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.name}</option>
+              ))}
+            </select>
+          )}
 
-      {/* Monthly KPI Overview */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-        <div className="bg-white p-3 sm:p-4 rounded-xl border border-taupe-200 shadow-xs">
-          <div className="text-[11px] sm:text-xs text-taupe-500 font-medium">出勤筆數</div>
-          <div className="text-base sm:text-lg font-bold text-taupe-900 font-mono mt-0.5 tabular-nums truncate">
-            {displayedRecords.length} <span className="text-xs font-normal text-taupe-500">筆</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-3 sm:p-4 rounded-xl border border-taupe-200 shadow-xs">
-          <div className="text-[11px] sm:text-xs text-taupe-500 font-medium">累計工時</div>
-          <div className="text-base sm:text-lg font-bold text-taupe-600 font-mono mt-0.5 tabular-nums truncate">
-            {displayedRecords
-              .reduce((sum, r) => sum + (r.durationHours || 0), 0)
-              .toFixed(1)}{' '}
-            <span className="text-xs font-normal text-taupe-500">小時</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-3 sm:p-4 rounded-xl border border-taupe-200 shadow-xs">
-          <div className="text-[11px] sm:text-xs text-taupe-500 font-medium">總工數</div>
-          <div className="text-base sm:text-lg font-bold text-taupe-600 font-mono mt-0.5 tabular-nums truncate">
-            {displayedRecords
-              .reduce((sum, r) => sum + (r.wageMultiplier || 1.0), 0)
-              .toFixed(1)}{' '}
-            <span className="text-xs font-normal text-taupe-500">工</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-3 sm:p-4 rounded-xl border border-taupe-200 shadow-xs">
-          <div className="text-[11px] sm:text-xs text-taupe-500 font-medium">預估日薪總額</div>
-          <div className="text-base sm:text-lg font-bold text-taupe-700 font-mono mt-0.5 tabular-nums truncate">
-            NT${' '}
-            {displayedRecords
-              .reduce((sum, r) => sum + (r.calculatedWage || 0), 0)
-              .toLocaleString()}
+          <div className="flex items-center bg-[#FAF8F5] rounded-xl border border-[#E6E1D8] p-1">
+            <button onClick={prevMonth} className="p-1.5 text-[#706458] hover:text-[#2B2521] hover:bg-[#EAE3DA] rounded-lg transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="px-3 text-sm font-bold text-[#2B2521] min-w-[100px] text-center">
+              {year}年 {month + 1}月
+            </div>
+            <button onClick={nextMonth} className="p-1.5 text-[#706458] hover:text-[#2B2521] hover:bg-[#EAE3DA] rounded-lg transition-colors">
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Calendar Grid Container */}
-      <div className="bg-white rounded-3xl border border-taupe-200 shadow-sm overflow-hidden">
-        {/* Status Legend Bar */}
-        <div className="flex items-center justify-between px-4 py-2 bg-taupe-50 border-b border-taupe-200 text-xs text-taupe-500">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 font-medium text-taupe-600">
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-taupe-50 text-taupe-700 border border-taupe-200">
-                WORK
-              </span>
-              有出工
-            </span>
-            <span className="flex items-center gap-1.5 text-taupe-400">
-              <span className="w-2 h-2 rounded-full bg-taupe-300" />
-              無出勤
-            </span>
-          </div>
-          <span className="text-[11px] text-taupe-400">
-            點選日期查看明細
-          </span>
+      {/* 日曆網格 */}
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#E6E1D8] shadow-sm">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
+          {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
+            <div key={day} className="text-center text-[11px] font-bold text-[#998D80] py-2">
+              {day}
+            </div>
+          ))}
         </div>
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
+          {calendarDays.map((day, index) => {
+            const dateStr = day ? `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : '';
+            const dayData = dateStr ? dailyData[dateStr] : null;
+            const isSelected = selectedDateStr === dateStr;
+            const isToday = day && dateStr === new Date().toISOString().split('T')[0];
 
-        {/* Day-of-week header */}
-        <div className="grid grid-cols-7 border-b border-taupe-200 bg-taupe-100/70 text-center py-2 text-xs font-bold text-taupe-700">
-          <span className="text-taupe-500">週日</span>
-          <span>週一</span>
-          <span>週二</span>
-          <span>週三</span>
-          <span>週四</span>
-          <span>週五</span>
-          <span className="text-taupe-500">週六</span>
-        </div>
-
-        {/* Days matrix */}
-        <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-taupe-100">
-          {calendarDays.map((cell, idx) => {
-            if (!cell) {
-              return (
-                <div
-                  key={`empty-${idx}`}
-                  className="min-h-[72px] sm:min-h-[88px] bg-taupe-50/50 p-2"
-                />
-              );
+            let hasMissing = false;
+            if (dayData && dayData.records) {
+              hasMissing = dayData.records.some(r => checkIsMissingOut(r.date, r.clockOutTime));
             }
 
-            const dayRecords = recordsByDate.get(cell.dateStr) || [];
-            const hasRecords = dayRecords.length > 0;
-            const isToday =
-              cell.dateStr === new Date().toISOString().split('T')[0];
-            const isWorkingAny = dayRecords.some((r) => !r.clockOutTime);
-
             return (
-              <button
-                key={cell.dateStr}
-                type="button"
-                onClick={() => handleDayClick(cell.dateStr)}
-                className={`min-h-[72px] sm:min-h-[88px] p-2 text-left transition-all relative flex flex-col justify-between group cursor-pointer ${
-                  isToday
-                    ? 'bg-taupe-50/70 ring-2 ring-taupe-500 ring-inset z-10'
-                    : hasRecords
-                    ? isWorkingAny
-                      ? 'bg-amber-50/20 hover:bg-amber-50/50'
-                      : 'bg-orange-50/20 hover:bg-orange-50/50'
-                    : 'bg-white hover:bg-taupe-50'
+              <div
+                key={index}
+                onClick={() => handleDayClick(day)}
+                className={`min-h-[70px] sm:min-h-[90px] p-1 sm:p-2 rounded-xl sm:rounded-2xl border transition-all cursor-pointer relative flex flex-col ${
+                  !day ? 'bg-transparent border-transparent cursor-default' :
+                  isSelected ? 'bg-[#2B2521] border-[#2B2521] text-white shadow-md scale-105 z-10' :
+                  isToday ? 'bg-[#FAF8F5] border-[#6E5D4F] text-[#2B2521]' :
+                  'bg-white border-[#E6E1D8] text-[#2B2521] hover:border-[#D4C9BC] hover:bg-[#FAF8F5]'
                 }`}
               >
-                {/* Top date and subtle gray headcount */}
-                <div className="flex items-center justify-between gap-1">
-                  <span
-                    className={`inline-flex items-center justify-center text-xs sm:text-sm font-bold w-6 h-6 rounded-full shrink-0 ${
-                      isToday
-                        ? 'bg-taupe-600 text-white shadow-xs'
-                        : 'text-taupe-800'
-                    }`}
-                  >
-                    {cell.dayNumber}
-                  </span>
-
-                  {hasRecords && (
-                    <span className="text-[10px] font-mono text-taupe-400 font-normal">
-                      {dayRecords.length}人
-                    </span>
-                  )}
-                </div>
-
-                {/* Center: Clean minimalist green WORK badge */}
-                <div className="my-auto py-1 flex items-center justify-center">
-                  {hasRecords && (
-                    <span
-                      className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-colors shadow-2xs ${
-                        isWorkingAny
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-taupe-50 text-taupe-700 border border-taupe-200'
-                      }`}
-                    >
-                      WORK
-                    </span>
-                  )}
-                </div>
-
-                {/* Bottom spacer for clean visual balance */}
-                <div className="h-1" />
-              </button>
+                {day && (
+                  <>
+                    <div className="text-xs sm:text-sm font-bold mb-1">{day}</div>
+                    
+                    <div className="flex flex-col gap-0.5 mt-auto">
+                      {/* 出勤標記 */}
+                      {dayData && dayData.records.length > 0 && (
+                        <div className={`text-[9px] sm:text-[10px] px-1 py-0.5 rounded leading-tight truncate ${
+                          isSelected ? 'bg-[#423932] text-[#D4C9BC]' :
+                          hasMissing ? 'bg-rose-50 text-rose-600 border border-rose-200' :
+                          'bg-[#EAE3DA] text-[#4A3D32]'
+                        }`}>
+                          {selectedEmpId === 'ALL' ? `${dayData.records.length}人出勤` : `工時: ${dayData.records.reduce((s, r) => s + (r.durationHours || 0), 0)}h`}
+                        </div>
+                      )}
+                      {/* 加給標記 */}
+                      {dayData && dayData.bonuses.length > 0 && (
+                        <div className={`text-[9px] sm:text-[10px] px-1 py-0.5 rounded leading-tight truncate ${
+                          isSelected ? 'bg-amber-900/50 text-amber-200' :
+                          'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}>
+                          + 加給
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             );
           })}
         </div>
       </div>
 
-      {/* Date Detail Modal / Drawer */}
-      {selectedDayModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-taupe-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl border border-taupe-200 flex flex-col max-h-[85vh]">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-taupe-100 flex items-center justify-between bg-taupe-50">
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-taupe-600" />
-                <h3 className="font-bold text-taupe-900 text-lg">
-                  {selectedDayModal} 出勤紀錄
-                </h3>
-              </div>
+      {/* 當日詳細資訊面板 */}
+      {selectedDateStr && (
+        <div className="bg-white rounded-3xl border border-[#E6E1D8] p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center justify-between border-b border-[#E6E1D8] pb-3">
+            <h3 className="font-bold text-[#2B2521] text-base flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4 text-[#6E5D4F]" />
+              <span>{selectedDateStr} 明細紀錄</span>
+            </h3>
+            {isAdmin && (
               <button
-                onClick={() => setSelectedDayModal(null)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-taupe-400 hover:text-taupe-600 hover:bg-taupe-200"
+                onClick={() => onAddManualPunch(selectedDateStr, selectedEmpId !== 'ALL' ? selectedEmpId : currentEmployee.id)}
+                className="px-3 py-1.5 bg-[#EAE3DA] hover:bg-[#DFD6C9] text-[#4A3D32] text-xs font-bold rounded-xl flex items-center gap-1 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <Plus className="w-3.5 h-3.5" />
+                <span>新增手動補登</span>
               </button>
-            </div>
-
-            {/* Permission reminder note */}
-            <div className="px-6 py-2.5 bg-amber-50/70 border-b border-amber-100 text-xs text-amber-800 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Shield className="w-4 h-4 text-amber-600 shrink-0" />
-                {isAdmin
-                  ? '管理員模式：您可直接修改上下班時間或補登打卡'
-                  : '員工查看模式：僅能查看上下班時間，修改請聯繫管理員'}
-              </span>
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    onAddManualPunch(selectedDayModal);
-                    setSelectedDayModal(null);
-                  }}
-                  className="px-2.5 py-1 text-xs font-bold bg-amber-600 text-white rounded-lg hover:bg-amber-700 flex items-center gap-1"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  新增補打卡
-                </button>
-              )}
-            </div>
-
-            {/* Records List Body */}
-            <div className="p-6 overflow-y-auto space-y-4">
-              {selectedDateRecords.length === 0 ? (
-                <div className="text-center py-8 text-taupe-500 space-y-3">
-                  <Clock className="w-10 h-10 text-taupe-300 mx-auto" />
-                  <p className="text-sm font-medium">該日尚無打卡出勤紀錄</p>
-                  {isAdmin && (
-                    <button
-                      onClick={() => {
-                        onAddManualPunch(selectedDayModal);
-                        setSelectedDayModal(null);
-                      }}
-                      className="px-4 py-2 text-xs font-bold bg-taupe-600 text-white rounded-xl hover:bg-taupe-700 inline-flex items-center gap-1.5"
-                    >
-                      <PlusCircle className="w-4 h-4" />
-                      幫員工補登此日打卡
-                    </button>
-                  )}
-                </div>
-              ) : (
-                selectedDateRecords.map((rec) => {
-                  const emp = employees.find((e) => e.id === rec.employeeId);
-                  const isComplete = Boolean(rec.clockOutTime);
-
-                  return (
-                    <div
-                      key={rec.id}
-                      className="p-4 rounded-2xl border border-taupe-200 bg-white shadow-xs space-y-3"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-taupe-900 text-base">
-                              {rec.employeeName}
-                            </span>
-                            <span className="text-xs font-medium text-taupe-600 bg-taupe-100 px-2 py-0.5 rounded">
-                              {emp?.workType || '師傅'}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-taupe-500 mt-1">
-                            <MapPin className="w-3 h-3 text-taupe-500 shrink-0" />
-                            <span>{rec.siteName}</span>
-                          </div>
-                        </div>
-
-                        {isAdmin && (
-                          <button
-                            onClick={() => {
-                              onEditRecord(rec);
-                              setSelectedDayModal(null);
-                            }}
-                            className="px-3 py-1.5 rounded-lg border border-taupe-200 text-taupe-700 text-xs font-bold hover:bg-taupe-50 flex items-center gap-1"
-                          >
-                            <Edit2 className="w-3 h-3 text-taupe-600" />
-                            修改
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Time Details Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-taupe-100 text-xs">
-                        <div className="bg-taupe-50 p-2 rounded-lg">
-                          <span className="text-taupe-500 block">上班時間</span>
-                          <span className="font-mono font-bold text-taupe-800 text-sm">
-                            {rec.clockInTime}
-                          </span>
-                        </div>
-
-                        <div className="bg-taupe-50 p-2 rounded-lg">
-                          <span className="text-taupe-500 block">下班時間</span>
-                          <span className="font-mono font-bold text-taupe-800 text-sm">
-                            {rec.clockOutTime || '施工中未下班'}
-                          </span>
-                        </div>
-
-                        <div className="bg-taupe-50 p-2 rounded-lg">
-                          <span className="text-taupe-500 block">工時 / 工數</span>
-                          <span className="font-mono font-bold text-taupe-600 text-sm">
-                            {rec.durationHours ? `${rec.durationHours}h` : '-'} (
-                            {rec.wageMultiplier ?? 1.0} 工)
-                          </span>
-                        </div>
-
-                        <div className="bg-taupe-50 p-2 rounded-lg">
-                          <span className="text-taupe-500 block">核算工資</span>
-                          <span className="font-mono font-bold text-taupe-700 text-sm">
-                            NT$ {(rec.calculatedWage || emp?.dailyRate || 0).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-
-                      {rec.notes && (
-                        <div className="text-xs text-taupe-600 bg-taupe-50 p-2 rounded-lg">
-                          <strong>備註：</strong> {rec.notes}
-                        </div>
-                      )}
-
-                      {rec.modifiedByAdmin && (
-                        <div className="text-[11px] text-amber-700 flex items-center gap-1 font-medium">
-                          <Shield className="w-3 h-3 text-amber-600" />
-                          已由管理員審核修訂紀錄
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-3 border-t border-taupe-100 bg-taupe-50 flex justify-end">
-              <button
-                onClick={() => setSelectedDayModal(null)}
-                className="px-5 py-2 text-xs font-semibold text-taupe-700 bg-white border border-taupe-200 rounded-xl hover:bg-taupe-100"
-              >
-                關閉
-              </button>
-            </div>
+            )}
           </div>
-        </div>
-      )}
-    </div>
-  );
-};
+
+          {!selectedDayInfo || (selectedDayInfo.records.length === 0 && selectedDayInfo.bonuses.length === 0) ? (
+            <div className="text-center py-6 text-xs text-[#998D80] bg-[#FAF8F5] rounded-2xl border border-dashed border-[#E6E1D8]">
+              此日期尚無任何出勤與加給紀錄
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* 打卡紀錄列表 */}
+              {selectedDayInfo.records.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-[11px] font-bold text-[#706458] mb-2 uppercase tracking-wider">出勤紀錄</div>
+                  {selectedDayInfo.records.map((record) => {
+                    const missing = checkIsMissingOut(record.date, record.clockOutTime);
+                    const emp = employees.find(e => e.id === record.employeeId);
+                    
+                    return (
+                      <div key={record.id} className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E6E1D8] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-hover hover:border-[#D4C9BC]">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-bold text-[#2B2521] text-sm">{record.employeeName}</span>
+                            <span className="text-[10px] text-[#706458]">{emp?.workType || '一般'}</span>
+                            {missing && <span className="flex items-center gap-0.5 px-1.5 py-0.2 bg-rose-50 text-rose-600 border border-rose-200 rounded text-[10px] font-bold"><AlertCircle className="w-3 h-3" />缺卡異常</span>}
+                          </div>
+                          <div className="text-xs text-[#706458] flex items-center gap-2
