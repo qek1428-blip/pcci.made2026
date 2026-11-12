@@ -397,7 +397,7 @@ export default function App() {
   const handleSaveBonusSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) {
-      alert('⚠️ 僅管理人 (薄老闆) 具備新增加給費用之權限！');
+      alert('⚠️ 僅管理員具備新增加給費用之權限！');
       return;
     }
     const numAmount = Number(bonusAmount);
@@ -767,7 +767,7 @@ export default function App() {
                         <span>{emp.name}</span>
                         <span className="text-[10px] px-1.5 py-0.2 bg-[#D4C9BC] text-[#4A3D32] rounded font-semibold">管理人</span>
                       </div>
-                      <div className="text-[11px] text-[#6E5D4F] mt-0.5 font-medium">薄老闆 · 最高權限管理</div>
+                      <div className="text-[11px] text-[#6E5D4F] mt-0.5 font-medium">最高權限管理</div>
                     </div>
                     <Lock className="w-4 h-4 text-[#6E5D4F]" />
                   </button>
@@ -919,7 +919,7 @@ export default function App() {
             className="flex items-center gap-1 px-2.5 py-1.5 bg-[#EAE3DA] border border-[#D4C9BC] text-[#4A3D32] rounded-xl hover:bg-[#DFD6C9] transition-colors shadow-2xs text-[11px] font-medium shrink-0 ml-auto"
           >
             <MessageSquareWarning className="w-3 h-3 text-[#6E5D4F]" />
-            <span>回報問題給老闆</span>
+            <span>回報問題</span>
           </button>
         </div>
       </div>
@@ -1635,7 +1635,7 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <MessageSquareWarning className="w-5 h-5 text-[#D4C9BC]" />
                 <div>
-                  <h3 className="font-bold text-base">回報問題給老闆</h3>
+                  <h3 className="font-bold text-base">回報問題</h3>
                   <p className="text-[11px] text-[#C4B8AB]">訊息將即時寄達 pcci.made2026@gmail.com</p>
                 </div>
               </div>
