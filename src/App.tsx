@@ -14,7 +14,7 @@ import boboLogo from './assets/images/bobo_logo.jpg';
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhrpQIs-ygEFPOhVM8tafjpjSccqGMcsZ2-41WuxvEL-N9jXWi7eJVTpkKqD1wYEBX/exec';
 
-// 核心時區修復：以本地系統時區產生 YYYY-MM-DD，徹底解決早上 8 點前 UTC 跨日倒退一天的問題
+// 核心時區修復：以本地系統時鐘取得 YYYY-MM-DD，避免早上 8:00 前 UTC 時差導致日期倒退
 export const getLocalDateString = (d: Date = new Date()): string => {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -28,7 +28,6 @@ export const getLocalMonthPrefix = (d: Date = new Date()): string => {
   return `${year}-${month}`;
 };
 
-// PIN 碼格式化防呆：嚴格確保 4 位數
 const sanitizePin = (pinVal: any, defaultPin: string = '0000'): string => {
   if (pinVal === null || pinVal === undefined || pinVal === '') return defaultPin;
   let s = String(pinVal).trim();
@@ -248,7 +247,7 @@ export default function App() {
     fetchState();
   }, []);
 
-  // 依據本地設備真實日期比對今日紀錄
+  // 依據本地真實日期對齊今日紀錄
   const todayStr = getLocalDateString();
   const currentTodayRecord = records.find(
     (r) => r.employeeId === currentEmployee?.id && r.date === todayStr
@@ -291,7 +290,7 @@ export default function App() {
     playPunchSound('tap');
   };
 
-  // 打卡相關
+  // 打卡相關（以本地真實日期存檔）
   const handlePunchIn = async (siteName: string, notes: string) => {
     if (!currentEmployee) return;
     const now = new Date();
@@ -353,7 +352,7 @@ export default function App() {
     await sendToGoogleSheet({ action: 'saveRecord', record: updatedRecord });
   };
 
-  // 補登 / 修正出勤紀錄
+  // 補登出勤紀錄
   const handleSaveRecord = async (data: Partial<PunchRecord>) => {
     const targetDate = formatRecordDate(data.date || getLocalDateString());
     const recordId = data.id || `rec-${targetDate}-${data.employeeId}-${Date.now()}`;
