@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Employee, PunchRecord, BonusRecord } from '../types';
-import { Clock, MapPin, CheckCircle2, Users, Coins, Calendar, FileText, Edit3, ChevronRight } from 'lucide-react';
+import { Clock, MapPin, CheckCircle2, Users, Coins, Calendar, Edit3 } from 'lucide-react';
 import { playPunchSound } from '../utils/sound';
 
 interface PunchClockProps {
@@ -53,21 +53,23 @@ export const PunchClock: React.FC<PunchClockProps> = ({
   const isClockedIn = Boolean(todayRecord && todayRecord.clockInTime);
   const isClockedOut = Boolean(todayRecord && todayRecord.clockOutTime);
 
-  // 計算當月出勤工資
-  const currentMonthPrefix = new Date().toISOString().slice(0, 7); // YYYY-MM
+  // 本地時區當月前綴 (YYYY-MM)，避免 UTC 偏差
+  const currentYear = currentTime.getFullYear();
+  const currentMonth = String(currentTime.getMonth() + 1).padStart(2, '0');
+  const currentMonthPrefix = `${currentYear}-${currentMonth}`;
+
   const empMonthRecords = records.filter(
     (r) => r.employeeId === currentEmployee.id && r.date.startsWith(currentMonthPrefix)
   );
   const monthWorkWage = empMonthRecords.reduce((sum, r) => sum + (Number(r.calculatedWage) || 0), 0);
 
-  // 計算當月加給總額
   const empMonthBonuses = bonuses.filter(
     (b) => b.employeeId === currentEmployee.id && b.date.startsWith(currentMonthPrefix)
   );
   const monthBonusTotal = empMonthBonuses.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
   const monthTotalSalary = monthWorkWage + monthBonusTotal;
 
-  // 近期個人出勤紀錄（取最近 5 筆）
+  // 近期個人出勤紀錄（最近 5 筆）
   const empRecentRecords = records
     .filter((r) => r.employeeId === currentEmployee.id)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -108,7 +110,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
             {timeString}
           </div>
           
-          {/* 當前人員與【換人打卡】快捷按鈕 */}
+          {/* 出勤人員與換人打卡按鈕 */}
           <div className="inline-flex items-center gap-2 p-1.5 pl-3 rounded-2xl bg-[#FAF8F5] border border-[#E6E1D8]">
             <span className="text-xs text-[#706458]">出勤人員：</span>
             <span className="font-bold text-[#2B2521] text-sm">{currentEmployee.name}</span>
@@ -208,7 +210,7 @@ export const PunchClock: React.FC<PunchClockProps> = ({
         )}
       </div>
 
-      {/* 2. 本日出勤打卡狀態 (詳細數據儀表板) */}
+      {/* 2. 本日出勤打卡狀態 */}
       <div className="bg-white rounded-3xl border border-[#E6E1D8] p-5 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -289,11 +291,11 @@ export const PunchClock: React.FC<PunchClockProps> = ({
         )}
       </div>
 
-      {/* 3. 當月預估實領薪資卡片 (含加給自動累積) */}
+      {/* 3. 當月預估實領薪資卡片 */}
       <div className="bg-white rounded-3xl border border-[#E6E1D8] p-5 shadow-xs">
         <div className="flex items-center justify-between mb-2">
           <div className="text-xs font-bold text-[#706458]">
-            當月預估實領薪資 ({new Date().getMonth() + 1} 月)
+            當月預估實領薪資 ({currentTime.getMonth() + 1} 月)
           </div>
           {monthBonusTotal > 0 && (
             <div className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#EAE3DA] text-[#4A3D32] border border-[#D4C9BC]">
