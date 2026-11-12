@@ -365,7 +365,7 @@ export default function App() {
   const handleSaveBonusSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAdmin) {
-      alert('⚠️ 僅管理人 (薄老闆) 具備新增加給費用之權限！');
+      alert('⚠️ 僅管理員具備新增加給費用之權限！');
       return;
     }
     const numAmount = Number(bonusAmount);
@@ -650,7 +650,7 @@ export default function App() {
                   <button key={emp.id} onClick={() => { setLoginSelectedUser(emp); setLoginInputPin(''); setLoginPinError(''); }} className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-[#D4C9BC] bg-[#EAE3DA] hover:bg-[#DFD6C9] text-left transition-all shadow-2xs">
                     <div>
                       <div className="font-bold text-[#2B2521] text-sm flex items-center gap-1.5"><span>{emp.name}</span><span className="text-[10px] px-1.5 py-0.2 bg-[#D4C9BC] text-[#4A3D32] rounded font-semibold">管理人</span></div>
-                      <div className="text-[11px] text-[#6E5D4F] mt-0.5 font-medium">薄老闆 · 最高權限管理</div>
+                      <div className="text-[11px] text-[#6E5D4F] mt-0.5 font-medium">權限管理</div>
                     </div>
                     <Lock className="w-4 h-4 text-[#6E5D4F]" />
                   </button>
@@ -702,7 +702,7 @@ export default function App() {
             <button onClick={() => { setOldPin(''); setNewPin(''); setConfirmNewPin(''); setActivePinField('old'); setChangePinError(''); setChangePinSuccess(false); setIsChangePinOpen(true); }} className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-[#E6E1D8] text-[#54473C] rounded-xl hover:bg-[#FAF8F5] transition-colors shadow-2xs text-[11px] font-medium shrink-0"><KeyRound className="w-3 h-3 text-[#6E5D4F]" /><span>修改 PIN 碼</span></button>
             <button onClick={handleLogout} className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-[#E6E1D8] text-[#706458] hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors shadow-2xs text-[11px] font-medium shrink-0" title="登出並退回身分鎖定頁"><LogOut className="w-3 h-3 text-[#998D80]" /><span>登出鎖定</span></button>
           </div>
-          <button onClick={() => { setReportSuccess(false); setReportDesc(''); setReportPhone(currentEmployee.phone || ''); setIsReportModalOpen(true); }} className="flex items-center gap-1 px-2.5 py-1.5 bg-[#EAE3DA] border border-[#D4C9BC] text-[#4A3D32] rounded-xl hover:bg-[#DFD6C9] transition-colors shadow-2xs text-[11px] font-medium shrink-0 ml-auto"><MessageSquareWarning className="w-3 h-3 text-[#6E5D4F]" /><span>回報問題給老闆</span></button>
+          <button onClick={() => { setReportSuccess(false); setReportDesc(''); setReportPhone(currentEmployee.phone || ''); setIsReportModalOpen(true); }} className="flex items-center gap-1 px-2.5 py-1.5 bg-[#EAE3DA] border border-[#D4C9BC] text-[#4A3D32] rounded-xl hover:bg-[#DFD6C9] transition-colors shadow-2xs text-[11px] font-medium shrink-0 ml-auto"><MessageSquareWarning className="w-3 h-3 text-[#6E5D4F]" /><span>回報問題</span></button>
         </div>
       </div>
 
@@ -904,7 +904,7 @@ export default function App() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2521]/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-[#E6E1D8]">
             <div className="px-5 py-4 bg-[#2B2521] text-white flex items-center justify-between">
-              <div className="flex items-center gap-2"><MessageSquareWarning className="w-5 h-5 text-[#D4C9BC]" /><div><h3 className="font-bold text-base">回報問題給老闆</h3><p className="text-[11px] text-[#C4B8AB]">訊息將即時寄達 pcci.made2026@gmail.com</p></div></div>
+              <div className="flex items-center gap-2"><MessageSquareWarning className="w-5 h-5 text-[#D4C9BC]" /><div><h3 className="font-bold text-base">回報問題</h3><p className="text-[11px] text-[#C4B8AB]">訊息將即時寄達 pcci.made2026@gmail.com</p></div></div>
               <button onClick={() => setIsReportModalOpen(false)} className="text-[#C4B8AB] hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleSendReport} className="p-5 space-y-3.5">
