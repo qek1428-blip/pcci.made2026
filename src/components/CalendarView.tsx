@@ -228,4 +228,67 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                             <span className="text-[10px] text-[#706458]">{emp?.workType || '一般'}</span>
                             {missing && <span className="flex items-center gap-0.5 px-1.5 py-0.2 bg-rose-50 text-rose-600 border border-rose-200 rounded text-[10px] font-bold"><AlertCircle className="w-3 h-3" />缺卡異常</span>}
                           </div>
-                          <div className="text-xs text-[#706458] flex items-center gap-2
+                          <div className="text-xs text-[#706458] flex items-center gap-2">
+                            <span className="font-mono">{record.clockInTime} ~ {record.clockOutTime || '未下班'}</span>
+                            <span className="text-[#D4C9BC]">|</span>
+                            <span>{record.durationHours || 0}小時 ({record.wageMultiplier || 0}工)</span>
+                          </div>
+                          {record.siteName && (
+                            <div className="text-xs text-[#54473C] mt-1 flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-[#998D80]" />
+                              {record.siteName}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0 border-t border-[#E6E1D8] sm:border-0 pt-2 sm:pt-0">
+                          <div className="text-right">
+                            <div className="font-mono font-bold text-[#6E5D4F]">NT$ {(record.calculatedWage || 0).toLocaleString()}</div>
+                          </div>
+                          {isAdmin && (
+                            <button
+                              onClick={() => onEditRecord(record)}
+                              className="px-2.5 py-1.5 bg-white border border-[#E6E1D8] hover:bg-[#EAE3DA] text-[#54473C] text-[11px] font-semibold rounded-lg flex items-center gap-1 transition-colors shadow-2xs"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>修改</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 薪資加給列表 */}
+              {selectedDayInfo.bonuses.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <div className="text-[11px] font-bold text-[#706458] mb-2 uppercase tracking-wider">薪資加給紀錄</div>
+                  {selectedDayInfo.bonuses.map((bonus) => (
+                    <div key={bonus.id} className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-[#2B2521] text-sm">{bonus.employeeName}</span>
+                          <span className="flex items-center gap-0.5 px-1.5 py-0.2 bg-amber-100 text-amber-700 rounded text-[10px] font-bold">
+                            <Coins className="w-3 h-3" /> 加給費用
+                          </span>
+                        </div>
+                        <div className="text-xs text-[#706458]">
+                          事由：{bonus.note}
+                        </div>
+                      </div>
+                      <div className="text-right mt-2 sm:mt-0">
+                        <div className="font-mono font-bold text-amber-700">+NT$ {bonus.amount.toLocaleString()}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
