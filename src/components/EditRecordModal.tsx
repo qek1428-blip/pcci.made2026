@@ -181,7 +181,7 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                 {isCreating ? '管理員手動補登打卡' : '管理員修正打卡時間與工數'}
               </h3>
               <p className="text-xs text-taupe-400">
-                薄薄工程行 · 僅管理員 (薄老闆) 具備此修改權限
+                薄薄工程行 · 僅管理員具備此修改權限
               </p>
             </div>
           </div>
