@@ -327,7 +327,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 <Shield className="w-4 h-4 text-amber-600 shrink-0" />
                 {isAdmin
                   ? '管理員模式：您可直接修改上下班時間或補登打卡'
-                  : '員工查看模式：僅能查看上下班時間，修改請聯繫管理人 (薄老闆)'}
+                  : '員工查看模式：僅能查看上下班時間，修改請聯繫管理員'}
               </span>
               {isAdmin && (
                 <button
