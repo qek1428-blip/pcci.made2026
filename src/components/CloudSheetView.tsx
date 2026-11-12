@@ -1,9 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { PunchRecord, Employee, BonusRecord } from '../types';
-import { Download, Printer, Search, FileText, Edit3 } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { Search, FileText, Edit3 } from 'lucide-react';
 
 interface CloudSheetViewProps {
   records: PunchRecord[];
@@ -95,88 +92,13 @@ export const CloudSheetView: React.FC<CloudSheetViewProps> = ({
     };
   }, [filteredRecords, bonuses, selectedMonth, selectedEmployeeId]);
 
-  // 匯出 Excel
-  const exportToExcel = () => {
-    if (!isAdmin) {
-      alert('僅管理員可下載報表！');
-      return;
-    }
-    const exportData = filteredRecords.map((r) => ({
-      日期: r.date,
-      員工姓名: r.employeeName,
-      上班時間: r.clockInTime,
-      下班時間: r.clockOutTime || '未打卡(缺卡)',
-      折算工數: r.wageMultiplier ? `${r.wageMultiplier}工` : '0工',
-      當日工資: r.calculatedWage,
-      施工案場: r.siteName || '',
-      狀態: r.clockInTime && r.clockOutTime ? '已下班' : '缺卡/出勤中',
-      備註說明: r.notes || '',
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '打卡紀錄');
-    XLSX.writeFile(wb, `薄薄工程行_出勤紀錄_${selectedMonth}.xlsx`);
-  };
-
-  // 匯出 PDF
-  const exportToPDF = () => {
-    if (!isAdmin) {
-      alert('僅管理員可列印報表！');
-      return;
-    }
-    const doc = new jsPDF('l', 'pt', 'a4'); // 橫向 A4
-
-    doc.addFileToVFS('NotoSansTC-Regular.ttf', 'AAEAAAAQAQAABAAARkZUT... (此處為字體base64，實際專案需另外加載)');
-    
-    // NOTE: 此處為簡易示範，實際匯出中文字體需掛載 vfs 檔案。
-    doc.text(`薄薄工程行出勤紀錄表 - ${selectedMonth}`, 40, 40);
-
-    const tableColumn = ["日期", "姓名", "上班", "下班", "工數", "當日工資", "案場", "備註"];
-    const tableRows = filteredRecords.map((r) => [
-      r.date,
-      r.employeeName,
-      r.clockInTime,
-      r.clockOutTime || '缺卡',
-      r.wageMultiplier,
-      r.calculatedWage,
-      r.siteName || '',
-      r.notes || '',
-    ]);
-
-    (doc as any).autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: 60,
-      styles: { font: 'helvetica', fontSize: 10 },
-    });
-
-    doc.save(`薄薄工程行_出勤紀錄_${selectedMonth}.pdf`);
-  };
-
   return (
     <div className="space-y-4 max-w-7xl mx-auto">
-      {/* 標題與匯出按鈕區 */}
-      <div className="bg-white rounded-3xl p-5 border border-[#E6E1D8] flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm">
+      {/* 標題 */}
+      <div className="bg-white rounded-3xl p-5 border border-[#E6E1D8] flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-2">
           <FileText className="w-5 h-5 text-[#6E5D4F]" />
           <h2 className="text-lg font-bold text-[#2B2521]">出勤雲端表單 (含薪資加給)</h2>
-        </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button
-            onClick={exportToExcel}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[#6E5D4F] hover:bg-[#5C4D40] text-white text-xs font-bold rounded-xl transition-all shadow-xs active:scale-95"
-          >
-            <Download className="w-4 h-4" />
-            <span>下載 Excel</span>
-          </button>
-          <button
-            onClick={exportToPDF}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[#2B2521] hover:bg-[#1E1916] text-white text-xs font-bold rounded-xl transition-all shadow-xs active:scale-95"
-          >
-            <Printer className="w-4 h-4" />
-            <span>列印 PDF</span>
-          </button>
         </div>
       </div>
 
@@ -275,77 +197,4 @@ export const CloudSheetView: React.FC<CloudSheetViewProps> = ({
                 <th className="px-4 py-3 font-semibold text-center">上班時間</th>
                 <th className="px-4 py-3 font-semibold text-center">下班時間</th>
                 <th className="px-4 py-3 font-semibold text-center">累計工時</th>
-                <th className="px-4 py-3 font-semibold text-center">折算工數</th>
-                <th className="px-4 py-3 font-semibold text-right">當日工資</th>
-                <th className="px-4 py-3 font-semibold">施工案場</th>
-                <th className="px-4 py-3 font-semibold text-center">狀態</th>
-                <th className="px-4 py-3 font-semibold">備註說明</th>
-                <th className="px-4 py-3 font-semibold text-center">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E6E1D8]/60 text-[#2B2521]">
-              {filteredRecords.length === 0 ? (
-                <tr>
-                  <td colSpan={13} className="px-4 py-8 text-center text-[#998D80]">
-                    該條件下無任何打卡紀錄
-                  </td>
-                </tr>
-              ) : (
-                filteredRecords.map((record, index) => {
-                  const emp = employees.find((e) => e.id === record.employeeId);
-                  const isMissingOut = record.clockInTime && !record.clockOutTime;
-                  
-                  return (
-                    <tr key={record.id} className="hover:bg-[#FAF8F5] transition-colors">
-                      <td className="px-4 py-3 text-center text-[#998D80]">{index + 1}</td>
-                      <td className="px-4 py-3 font-mono font-bold text-[#54473C]">{record.date}</td>
-                      <td className="px-4 py-3 font-bold">{record.employeeName}</td>
-                      <td className="px-4 py-3 text-[#706458]">{emp?.workType || '一般'}</td>
-                      <td className="px-4 py-3 font-mono text-center">{record.clockInTime}</td>
-                      <td className="px-4 py-3 font-mono text-center">
-                        {record.clockOutTime ? (
-                          record.clockOutTime
-                        ) : (
-                          <span className="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded">缺卡</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center">{record.durationHours ? `${record.durationHours}h` : '-'}</td>
-                      <td className="px-4 py-3 text-center font-bold text-[#6E5D4F]">{record.wageMultiplier || 0} 工</td>
-                      <td className="px-4 py-3 text-right font-mono font-bold text-[#6E5D4F]">
-                        NT$ {(record.calculatedWage || 0).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3">{record.siteName || '-'}</td>
-                      <td className="px-4 py-3 text-center">
-                        {isMissingOut ? (
-                          <span className="px-2 py-0.5 rounded border border-rose-200 bg-rose-50 text-rose-600 text-[10px] font-bold">缺卡異常</span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded border border-[#D4C9BC] bg-[#EAE3DA] text-[#4A3D32] text-[10px] font-bold">已下班</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-[#706458] max-w-[150px] truncate" title={record.notes}>
-                        {record.notes || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {isAdmin ? (
-                          <button
-                            onClick={() => onEditRecord(record)}
-                            className="p-1.5 text-[#998D80] hover:text-[#2B2521] hover:bg-[#EAE3DA] rounded-lg transition-colors inline-flex"
-                            title="修正此紀錄"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <span className="text-[#D6CEC3]">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
+                <th className="px-4
